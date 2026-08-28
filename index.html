@@ -468,43 +468,45 @@ textarea.notes-area{min-height:130px;resize:vertical;line-height:1.6;font-size:1
   border-bottom:1px solid var(--paper-line);
 }
 .flight-section[hidden]{display:none;}
-.flight-card{
+.flight-row{
   display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.flight-card{
+  flex:1 1 0;
+  min-width:112px;
   background:var(--paper-raised);
   border:1px solid var(--paper-line);
-  border-radius:12px;
-  overflow:hidden;
-  margin-bottom:12px;
+  border-left:4px solid var(--ink-soft);
+  border-radius:10px;
+  padding:12px 11px;
   box-shadow:0 2px 10px rgba(0,0,0,.3);
 }
-.flight-card.outbound{border-left:4px solid var(--red);}
-.flight-card.inbound{border-left:4px solid var(--teal);}
-.flight-stub{
-  flex:0 0 auto;width:52px;
-  display:flex;align-items:center;justify-content:center;
-  background:var(--paper);
-  border-right:1px dashed var(--paper-line);
-  color:var(--ink-soft);
-}
-.flight-card.outbound .flight-stub{color:var(--red-glow);}
-.flight-card.inbound .flight-stub{color:var(--teal-light);}
-.flight-main{flex:1;padding:14px 16px;min-width:0;}
-.flight-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
+.flight-card.owner-shared{border-left-color:var(--ink-soft);}
+.flight-card.owner-qixuan{border-left-color:var(--qixuan);}
+.flight-card.owner-yuan{border-left-color:var(--yuan);}
+.flight-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
 .flight-type-badge{
-  font-family:var(--font-body);font-size:10px;font-weight:700;
-  padding:3px 9px;border-radius:20px;
+  font-family:var(--font-body);font-size:9.5px;font-weight:700;
+  padding:3px 8px;border-radius:20px;
   background:var(--ink);color:var(--paper);white-space:nowrap;
 }
-.flight-date{font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);}
+.flight-date{font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);}
 .flight-route{
-  display:flex;align-items:center;gap:8px;
-  font-family:var(--font-mono);font-weight:700;font-size:21px;
-  color:var(--ink);margin-bottom:7px;
+  font-family:var(--font-mono);font-weight:700;font-size:16px;
+  color:var(--ink);margin-bottom:6px;letter-spacing:.01em;
 }
-.plane-icon{color:var(--ink-soft);flex:0 0 auto;}
-.flight-time{font-family:var(--font-mono);font-size:14px;color:var(--ink);margin-bottom:3px;}
-.time-sep{color:var(--ink-soft);}
-.flight-airline{font-size:12.5px;color:var(--ink-soft);}
+.flight-time{font-family:var(--font-mono);font-size:13px;color:var(--ink);margin-bottom:5px;}
+.flight-airline{font-size:11.5px;color:var(--ink-soft);margin-bottom:8px;line-height:1.5;}
+.flight-track-link{
+  display:inline-block;
+  font-family:var(--font-body);font-size:11.5px;font-weight:700;
+  color:var(--red-glow);text-decoration:none;
+  border-bottom:1px dashed var(--red-glow);
+}
+.flight-track-link:hover{color:var(--ink);border-bottom-color:var(--ink);}
 
 .sync-badge{
   display:inline-flex;align-items:center;gap:5px;
@@ -665,44 +667,41 @@ h2.section-title{
     </div>
 
     <div class="flight-section" id="flightSection" hidden>
-      <div class="flight-card outbound">
-        <div class="flight-stub">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.4 5.8c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
-        </div>
-        <div class="flight-main">
+      <div class="flight-row">
+        <div class="flight-card owner-shared">
           <div class="flight-top">
             <span class="flight-type-badge">去程</span>
             <span class="flight-date">9/8 (二)</span>
           </div>
-          <div class="flight-route">
-            <span>TPE</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="plane-icon"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-            <span>CJJ</span>
-          </div>
-          <div class="flight-time">時間待補</div>
-          <div class="flight-airline">易斯達航空 Eastar Jet ZE782（桃園 → 清州）</div>
+          <div class="flight-route">TPE→CJJ</div>
+          <div class="flight-time">02:40–05:05</div>
+          <div class="flight-airline">易斯達航空 ZE782<br>桃園 → 清州</div>
+          <a class="flight-track-link" href="https://www.flightaware.com/live/flight/ZE782" target="_blank" rel="noopener">查詢航班資訊</a>
         </div>
-      </div>
 
-      <div class="flight-card inbound">
-        <div class="flight-stub">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.4 5.8c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"></path></svg>
-        </div>
-        <div class="flight-main">
+        <div class="flight-card owner-qixuan">
           <div class="flight-top">
-            <span class="flight-type-badge">回程</span>
+            <span class="flight-type-badge">回程・琪萱</span>
+            <span class="flight-date">9/14 (一)</span>
+          </div>
+          <div class="flight-route">ICN→TPE</div>
+          <div class="flight-time">00:30–02:13</div>
+          <div class="flight-airline">台灣虎航 IT603<br>仁川 → 桃園</div>
+          <a class="flight-track-link" href="https://www.flightaware.com/live/flight/IT603" target="_blank" rel="noopener">查詢航班資訊</a>
+        </div>
+
+        <div class="flight-card owner-yuan">
+          <div class="flight-top">
+            <span class="flight-type-badge">回程・Yuan</span>
             <span class="flight-date">9/17 (四)</span>
           </div>
-          <div class="flight-route">
-            <span>PUS</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="plane-icon"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-            <span>TPE</span>
-          </div>
-          <div class="flight-time">時間待補</div>
-          <div class="flight-airline">真航空 Jin Air LJ751（釜山 → 桃園）</div>
+          <div class="flight-route">PUS→TPE</div>
+          <div class="flight-time">22:00–23:40</div>
+          <div class="flight-airline">真航空 LJ751<br>釜山 → 桃園</div>
+          <a class="flight-track-link" href="https://www.flightaware.com/live/flight/LJ751" target="_blank" rel="noopener">查詢航班資訊</a>
         </div>
       </div>
-      <p class="assumption-note">兩段航班時間你沒提供，我先留白；告訴我實際時間我再幫你補上，或你也可以直接改這段 HTML。</p>
+      <p class="assumption-note">航班資訊僅供快速閱覽參考，實際請依機場最新動態為主。</p>
     </div>
 
     <div class="notes-filter" id="itineraryFilterGroup">
@@ -768,7 +767,7 @@ h2.section-title{
     <div id="notesFilterGroup">
       <div class="who-section" data-who="shared">
         <h3 class="who-title"><span class="who-dot"></span>共同</h3>
-        <textarea class="notes-area" data-who="shared" placeholder="住宿代碼、集合地點、演唱會票務資訊、航班時間…兩人都要看的放這裡。"></textarea>
+        <textarea class="notes-area" data-who="shared" placeholder="集合地點、臨時事項…兩人都要看的放這裡"></textarea>
       </div>
 
       <div class="who-section" data-who="yuan">
