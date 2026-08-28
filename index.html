@@ -323,6 +323,34 @@ body{
 .day-add-btn.active{background:var(--city-color);color:var(--paper);transform:rotate(45deg);}
 .day-body{padding:6px 16px 18px;}
 
+.act-columns{display:flex;gap:10px;align-items:flex-start;}
+.act-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:8px;}
+.act-col-title{
+  font-family:var(--font-mono);font-size:10.5px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft);margin-bottom:2px;
+  display:flex;align-items:center;gap:5px;
+}
+.act-col-yuan .act-col-title{color:var(--yuan);}
+.act-col-qixuan .act-col-title{color:var(--qixuan);}
+.act-col-shared .act-col-title{color:var(--ink-soft);}
+.act-col-empty{font-size:11.5px;color:#5a534d;padding:2px 0;}
+
+#dayList.filter-yuan .act-col-qixuan{display:none;}
+#dayList.filter-qixuan .act-col-yuan{display:none;}
+#dayList.filter-shared .act-col-yuan,
+#dayList.filter-shared .act-col-qixuan{display:none;}
+
+@media (max-width:480px){
+  .act-columns{gap:6px;}
+  .act-col{gap:6px;}
+  .act-col-title{font-size:9.5px;}
+  .activity-card{padding:9px 9px;}
+  .activity-name{font-size:15px;}
+  .activity-time,.activity-meta,.activity-notes{font-size:11px;}
+  .act-tag{font-size:9px;padding:2px 6px;}
+}
+
 .activity-card{
   padding:12px 14px;
   margin-bottom:10px;
@@ -749,13 +777,13 @@ h2.section-title{
     </div>
 
     <div class="notes-filter" id="itineraryFilterGroup">
-      <button class="filter-btn active" data-itin-filter="shared">共同</button>
-      <button class="filter-btn" data-itin-filter="all">全部</button>
+      <button class="filter-btn active" data-itin-filter="all">全部</button>
       <button class="filter-btn" data-itin-filter="yuan">Yuan</button>
+      <button class="filter-btn" data-itin-filter="shared">共同</button>
       <button class="filter-btn" data-itin-filter="qixuan">琪萱</button>
     </div>
 
-    <div id="dayList"></div>
+    <div id="dayList" class="filter-all"></div>
   </div>
 
   <div class="panel" id="panel-stay">
@@ -1170,7 +1198,20 @@ function renderDays(){
         </button>
       </div>
       <div class="day-body" data-date="${day.date}" hidden>
-        <div class="act-list" data-date="${day.date}"></div>
+        <div class="act-columns" data-date="${day.date}">
+          <div class="act-col act-col-yuan">
+            <div class="act-col-title"><span class="owner-dot yuan"></span>Yuan</div>
+            <div class="act-col-list" data-date="${day.date}" data-who="yuan"></div>
+          </div>
+          <div class="act-col act-col-shared">
+            <div class="act-col-title"><span class="owner-dot shared"></span>共同</div>
+            <div class="act-col-list" data-date="${day.date}" data-who="shared"></div>
+          </div>
+          <div class="act-col act-col-qixuan">
+            <div class="act-col-title"><span class="owner-dot qixuan"></span>琪萱</div>
+            <div class="act-col-list" data-date="${day.date}" data-who="qixuan"></div>
+          </div>
+        </div>
       </div>
     `;
     list.appendChild(card);
@@ -1312,69 +1353,70 @@ function activityMapHref(a){
   return '';
 }
 
-let itineraryFilter = 'shared';
+let itineraryFilter = 'all';
+const WHO_COLUMNS = ['yuan','shared','qixuan'];
+
+function renderActivityCard(a, i, date, who){
+  const mapHref = activityMapHref(a);
+  const editable = canEdit(who);
+  let metaHtml = '';
+  if(a.address){
+    metaHtml += `<a href="${escapeHtml(mapHref)}" target="_blank" rel="noopener">${escapeHtml(a.address)}</a>`;
+  }else if(mapHref){
+    metaHtml += `<a href="${escapeHtml(mapHref)}" target="_blank" rel="noopener">Naver/Google Maps</a>`;
+  }
+  if(a.cost){
+    metaHtml += `<span class="activity-cost">${escapeHtml(a.currency||'₩')}${Number(a.cost).toLocaleString()}</span>`;
+  }
+  const isConcert = a.category === '演唱會';
+  const actionsHtml = editable ? `
+      <button class="activity-edit" data-date="${date}" data-i="${i}" aria-label="編輯"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg></button>
+      <button class="activity-del" data-date="${date}" data-i="${i}" aria-label="刪除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
+  ` : '';
+  return `
+  <div class="activity-card ${isConcert ? 'is-concert' : ''} ${editable ? '' : 'not-editable'}" style="--cat-color:${CAT_COLOR[a.category]||'var(--ink-soft)'}">
+    <div class="activity-top">
+      <span class="act-tag ${CAT_CLASS[a.category]||'cat-other'}">${escapeHtml(a.category)}</span>
+      <div class="activity-name">${escapeHtml(a.name)}</div>
+      ${actionsHtml}
+    </div>
+    ${formatTimeRange(a) ? `<div class="activity-time">${formatTimeRange(a)}</div>` : ''}
+    ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
+    ${a.notes ? `<div class="activity-notes">${escapeHtml(a.notes)}</div>` : ''}
+  </div>
+`;
+}
 
 function renderActivities(date){
-  const el = document.querySelector('.act-list[data-date="'+date+'"]');
-  if(!el) return;
   const allItems = (state.activities[date] || []).map(normalizeActivity);
-  const visibleIdx = allItems.map((a,i)=>i).filter(i=>{
-    if(itineraryFilter === 'all') return true;
-    return (allItems[i].who || 'shared') === itineraryFilter;
-  });
-  if(visibleIdx.length===0){
-    el.innerHTML = `<div class="empty">${itineraryFilter==='all' ? '還沒有安排' : '這個篩選條件下還沒有安排'}</div>`;
-    return;
-  }
-  const order = visibleIdx.slice().sort((ia,ib)=>{
-    const ta = allItems[ia].timeStart, tb = allItems[ib].timeStart;
-    if(!ta && !tb) return ia - ib;
-    if(!ta) return 1;
-    if(!tb) return -1;
-    return ta.localeCompare(tb) || (ia - ib);
-  });
-  el.innerHTML = order.map(i=>{
-    const a = allItems[i];
-    const mapHref = activityMapHref(a);
-    const editable = canEdit(a.who || 'shared');
-    let metaHtml = '';
-    if(a.address){
-      metaHtml += `<a href="${escapeHtml(mapHref)}" target="_blank" rel="noopener">${escapeHtml(a.address)}</a>`;
-    }else if(mapHref){
-      metaHtml += `<a href="${escapeHtml(mapHref)}" target="_blank" rel="noopener">Naver/Google Maps</a>`;
+
+  WHO_COLUMNS.forEach(who=>{
+    const el = document.querySelector('.act-col-list[data-date="'+date+'"][data-who="'+who+'"]');
+    if(!el) return;
+    const idxs = allItems.map((a,i)=>i).filter(i => (allItems[i].who || 'shared') === who);
+    if(idxs.length === 0){
+      el.innerHTML = '<div class="act-col-empty">－</div>';
+      return;
     }
-    if(a.cost){
-      metaHtml += `<span class="activity-cost">${escapeHtml(a.currency||'₩')}${Number(a.cost).toLocaleString()}</span>`;
-    }
-    const isConcert = a.category === '演唱會';
-    const who = a.who || 'shared';
-    const actionsHtml = editable ? `
-        <button class="activity-edit" data-date="${date}" data-i="${i}" aria-label="編輯"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg></button>
-        <button class="activity-del" data-date="${date}" data-i="${i}" aria-label="刪除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
-    ` : '';
-    return `
-    <div class="activity-card ${isConcert ? 'is-concert' : ''} ${editable ? '' : 'not-editable'}" style="--cat-color:${CAT_COLOR[a.category]||'var(--ink-soft)'}">
-      <div class="activity-top">
-        <span class="act-tag ${CAT_CLASS[a.category]||'cat-other'}">${escapeHtml(a.category)}</span>
-        <div class="activity-name">${escapeHtml(a.name)}</div>
-        ${actionsHtml}
-      </div>
-      <div class="activity-time"><span class="owner-dot ${who}"></span>${escapeHtml(whoLabel(who))}${formatTimeRange(a) ? ' · ' + formatTimeRange(a) : ''}</div>
-      ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
-      ${a.notes ? `<div class="activity-notes">${escapeHtml(a.notes)}</div>` : ''}
-    </div>
-  `;
-  }).join('');
-  el.querySelectorAll('.activity-del').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      state.activities[date].splice(parseInt(b.dataset.i),1);
-      renderActivities(date);
-      renderStay();
-      writePath('activities/'+date, state.activities[date]);
+    const order = idxs.slice().sort((ia,ib)=>{
+      const ta = allItems[ia].timeStart, tb = allItems[ib].timeStart;
+      if(!ta && !tb) return ia - ib;
+      if(!ta) return 1;
+      if(!tb) return -1;
+      return ta.localeCompare(tb) || (ia - ib);
     });
-  });
-  el.querySelectorAll('.activity-edit').forEach(b=>{
-    b.addEventListener('click', ()=>editActivity(date, parseInt(b.dataset.i)));
+    el.innerHTML = order.map(i => renderActivityCard(allItems[i], i, date, who)).join('');
+    el.querySelectorAll('.activity-del').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        state.activities[date].splice(parseInt(b.dataset.i),1);
+        renderActivities(date);
+        renderStay();
+        writePath('activities/'+date, state.activities[date]);
+      });
+    });
+    el.querySelectorAll('.activity-edit').forEach(b=>{
+      b.addEventListener('click', ()=>editActivity(date, parseInt(b.dataset.i)));
+    });
   });
 }
 
@@ -1577,7 +1619,7 @@ document.querySelectorAll('#itineraryFilterGroup .filter-btn').forEach(btn=>{
     document.querySelectorAll('#itineraryFilterGroup .filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     itineraryFilter = btn.dataset.itinFilter;
-    DAYS_DEF.forEach(day=>renderActivities(day.date));
+    document.getElementById('dayList').className = 'filter-' + itineraryFilter;
   });
 });
 
