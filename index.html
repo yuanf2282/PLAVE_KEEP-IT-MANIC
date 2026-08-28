@@ -217,8 +217,7 @@ body{
 .schema-stop:focus-visible .schema-dot{stroke-width:2;}
 .schema-stop:focus-visible{outline:none;}
 .schema-stop:focus-visible .schema-hit{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 2;fill:none;}
-.day-card{transition:box-shadow .3s ease, border-color .3s ease;}
-.day-card.flash{border-color:var(--red);box-shadow:0 0 0 3px rgba(232,39,31,.25);}
+.day-card.flash .day-node{box-shadow:0 0 0 4px rgba(232,39,31,.35);}
 
 .tabbar{
   position:sticky;top:0;z-index:10;
@@ -246,21 +245,47 @@ body{
 .panel{display:none;padding:28px 0 0;}
 .panel.active{display:block;}
 
+#dayList{position:relative;padding-left:0;}
+#dayList::before{
+  content:"";
+  position:absolute;
+  left:23px;top:24px;bottom:24px;
+  width:2px;
+  background:var(--paper-line);
+  z-index:0;
+}
 .day-card{
-  background:var(--paper-raised);
-  border:1px solid var(--paper-line);
-  border-radius:6px;
-  margin-bottom:16px;
-  overflow:hidden;
+  position:relative;
+  padding-left:58px;
+  margin-bottom:18px;
+  transition:filter .3s ease;
+}
+.day-node{
+  position:absolute;
+  left:0;top:0;
+  width:46px;height:46px;
+  border-radius:50%;
+  background:var(--city-color);
+  color:#111;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-weight:700;font-size:12.5px;
+  letter-spacing:-.02em;
+  border:3px solid var(--paper);
+  box-shadow:0 0 0 1px var(--paper-line);
+  z-index:2;
+  transition:box-shadow .3s ease;
 }
 .day-head{
   display:flex;
   align-items:center;
-  gap:12px;
-  padding:14px 16px;
-  border-left:6px solid var(--city-color);
+  gap:10px;
+  min-height:46px;
+  padding:0 0 0 4px;
   cursor:pointer;
 }
+.day-head-main{display:flex;flex-direction:column;gap:1px;}
+.day-weekday{font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);}
+.day-city{font-weight:700;font-size:15px;color:var(--city-color);}
 .day-toggle-btn{
   flex:0 0 auto;
   width:24px;height:24px;
@@ -273,7 +298,6 @@ body{
 }
 .day-toggle-btn svg{transition:transform .2s ease;}
 .day-card.open .day-toggle-btn svg{transform:rotate(180deg);}
-.day-card.open .day-head{border-bottom:1px solid var(--paper-line);}
 
 .activity-modal-overlay{
   position:fixed;inset:0;z-index:150;
@@ -303,9 +327,6 @@ body{
 .activity-modal-body{display:flex;flex-direction:column;gap:8px;}
 .activity-modal-actions{display:flex;gap:8px;margin-top:14px;}
 .activity-modal-actions .act-submit{flex:1;}
-.day-date{font-family:var(--font-mono);font-weight:700;font-size:30px;}
-.day-weekday{font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);}
-.day-city{margin-left:auto;font-weight:700;font-size:14px;color:var(--city-color);}
 .day-add-btn{
   flex:0 0 auto;
   width:26px;height:26px;
@@ -318,10 +339,11 @@ body{
   cursor:pointer;padding:0;
   font-family:var(--font-body);
   transition:transform .2s ease, background .2s ease, color .2s ease;
+  margin-left:auto;
 }
 .day-add-btn:hover{background:var(--city-color);color:var(--paper);}
 .day-add-btn.active{background:var(--city-color);color:var(--paper);transform:rotate(45deg);}
-.day-body{padding:6px 16px 18px;}
+.day-body{padding:10px 0 4px;}
 
 .act-columns{display:flex;gap:10px;align-items:flex-start;}
 .act-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:8px;}
@@ -1186,13 +1208,13 @@ function renderDays(){
       : cityInfo.name;
 
     card.innerHTML = `
-      <div class="day-head" style="--city-color:${cityInfo.color}" data-date="${day.date}">
-        <div>
-          <div class="day-date">${d.getMonth()+1}/${d.getDate()}</div>
+      <div class="day-node" style="--city-color:${cityInfo.color}">${d.getMonth()+1}/${d.getDate()}</div>
+      <div class="day-head" data-date="${day.date}">
+        <div class="day-head-main">
           <div class="day-weekday">週${WD[d.getDay()]}</div>
+          <div class="day-city" style="--city-color:${cityInfo.color}">${cityLabel}</div>
         </div>
-        <div class="day-city">${cityLabel}</div>
-        <button class="day-add-btn" data-date="${day.date}" aria-label="新增行程" title="新增行程">+</button>
+        <button class="day-add-btn" style="--city-color:${cityInfo.color}" data-date="${day.date}" aria-label="新增行程" title="新增行程">+</button>
         <button class="day-toggle-btn" data-date="${day.date}" aria-label="展開或收合">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
         </button>
