@@ -345,28 +345,48 @@ body{
 .day-add-btn.active{background:var(--city-color);color:var(--paper);transform:rotate(45deg);}
 .day-body{padding:10px 0 4px;}
 
-.act-columns{display:flex;gap:10px;align-items:flex-start;}
-.act-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:8px;}
-.act-col-title{
-  font-family:var(--font-mono);font-size:10.5px;font-weight:700;
-  letter-spacing:.08em;text-transform:uppercase;
-  color:var(--ink-soft);margin-bottom:2px;
-  display:flex;align-items:center;gap:5px;
+.act-timeline{position:relative;padding:2px 0;}
+.act-timeline::before{
+  content:"";
+  position:absolute;
+  left:50%;top:0;bottom:0;
+  width:2px;
+  background:var(--paper-line);
+  transform:translateX(-50%);
+  z-index:0;
 }
-.act-col-yuan .act-col-title{color:var(--yuan);}
-.act-col-qixuan .act-col-title{color:var(--qixuan);}
-.act-col-shared .act-col-title{color:var(--ink-soft);}
-.act-col-empty{font-size:11.5px;color:#5a534d;padding:2px 0;}
+.act-row{
+  display:flex;
+  margin-bottom:12px;
+  position:relative;
+  z-index:1;
+}
+.act-row:last-child{margin-bottom:0;}
+.act-row.owner-yuan{justify-content:flex-start;}
+.act-row.owner-qixuan{justify-content:flex-end;}
+.act-row.owner-shared{justify-content:center;}
+.act-row.owner-yuan .activity-card,
+.act-row.owner-qixuan .activity-card{max-width:76%;}
+.act-row.owner-shared .activity-card{max-width:86%;background:var(--paper-raised);}
+.activity-owner-label{
+  text-align:center;
+  font-family:var(--font-mono);
+  font-size:9.5px;font-weight:700;letter-spacing:.07em;
+  margin-bottom:5px;
+}
+.activity-owner-label.owner-yuan{color:var(--yuan);}
+.activity-owner-label.owner-qixuan{color:var(--qixuan);}
+.activity-owner-label.owner-shared{color:var(--ink-soft);}
+.act-timeline-empty{font-size:12px;color:var(--ink-soft);text-align:center;padding:8px 0;}
 
-#dayList.filter-yuan .act-col-qixuan{display:none;}
-#dayList.filter-qixuan .act-col-yuan{display:none;}
-#dayList.filter-shared .act-col-yuan,
-#dayList.filter-shared .act-col-qixuan{display:none;}
+#dayList.filter-yuan .act-row.owner-qixuan{display:none;}
+#dayList.filter-qixuan .act-row.owner-yuan{display:none;}
+#dayList.filter-shared .act-row.owner-yuan,
+#dayList.filter-shared .act-row.owner-qixuan{display:none;}
 
 @media (max-width:480px){
-  .act-columns{gap:6px;}
-  .act-col{gap:6px;}
-  .act-col-title{font-size:9.5px;}
+  .act-row.owner-yuan .activity-card,
+  .act-row.owner-qixuan .activity-card{max-width:80%;}
   .activity-card{padding:9px 9px;}
   .activity-name{font-size:15px;}
   .activity-time,.activity-meta,.activity-notes{font-size:11px;}
@@ -800,8 +820,8 @@ h2.section-title{
 
     <div class="notes-filter" id="itineraryFilterGroup">
       <button class="filter-btn active" data-itin-filter="all">全部</button>
-      <button class="filter-btn" data-itin-filter="yuan">Yuan</button>
       <button class="filter-btn" data-itin-filter="shared">共同</button>
+      <button class="filter-btn" data-itin-filter="yuan">Yuan</button>
       <button class="filter-btn" data-itin-filter="qixuan">琪萱</button>
     </div>
 
@@ -1220,20 +1240,7 @@ function renderDays(){
         </button>
       </div>
       <div class="day-body" data-date="${day.date}" hidden>
-        <div class="act-columns" data-date="${day.date}">
-          <div class="act-col act-col-yuan">
-            <div class="act-col-title"><span class="owner-dot yuan"></span>Yuan</div>
-            <div class="act-col-list" data-date="${day.date}" data-who="yuan"></div>
-          </div>
-          <div class="act-col act-col-shared">
-            <div class="act-col-title"><span class="owner-dot shared"></span>共同</div>
-            <div class="act-col-list" data-date="${day.date}" data-who="shared"></div>
-          </div>
-          <div class="act-col act-col-qixuan">
-            <div class="act-col-title"><span class="owner-dot qixuan"></span>琪萱</div>
-            <div class="act-col-list" data-date="${day.date}" data-who="qixuan"></div>
-          </div>
-        </div>
+        <div class="act-timeline" data-date="${day.date}"></div>
       </div>
     `;
     list.appendChild(card);
@@ -1396,49 +1403,56 @@ function renderActivityCard(a, i, date, who){
       <button class="activity-del" data-date="${date}" data-i="${i}" aria-label="刪除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
   ` : '';
   return `
-  <div class="activity-card ${isConcert ? 'is-concert' : ''} ${editable ? '' : 'not-editable'}" style="--cat-color:${CAT_COLOR[a.category]||'var(--ink-soft)'}">
-    <div class="activity-top">
-      <span class="act-tag ${CAT_CLASS[a.category]||'cat-other'}">${escapeHtml(a.category)}</span>
-      <div class="activity-name">${escapeHtml(a.name)}</div>
-      ${actionsHtml}
+  <div class="act-row owner-${who}">
+    <div class="activity-card ${isConcert ? 'is-concert' : ''} ${editable ? '' : 'not-editable'}" style="--cat-color:${CAT_COLOR[a.category]||'var(--ink-soft)'}">
+      <div class="activity-owner-label owner-${who}">${escapeHtml(whoLabel(who))}</div>
+      <div class="activity-top">
+        <span class="act-tag ${CAT_CLASS[a.category]||'cat-other'}">${escapeHtml(a.category)}</span>
+        <div class="activity-name">${escapeHtml(a.name)}</div>
+        ${actionsHtml}
+      </div>
+      ${formatTimeRange(a) ? `<div class="activity-time">${formatTimeRange(a)}</div>` : ''}
+      ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
+      ${a.notes ? `<div class="activity-notes">${escapeHtml(a.notes)}</div>` : ''}
     </div>
-    ${formatTimeRange(a) ? `<div class="activity-time">${formatTimeRange(a)}</div>` : ''}
-    ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
-    ${a.notes ? `<div class="activity-notes">${escapeHtml(a.notes)}</div>` : ''}
   </div>
 `;
 }
 
 function renderActivities(date){
+  const el = document.querySelector('.act-timeline[data-date="'+date+'"]');
+  if(!el) return;
   const allItems = (state.activities[date] || []).map(normalizeActivity);
 
-  WHO_COLUMNS.forEach(who=>{
-    const el = document.querySelector('.act-col-list[data-date="'+date+'"][data-who="'+who+'"]');
-    if(!el) return;
-    const idxs = allItems.map((a,i)=>i).filter(i => (allItems[i].who || 'shared') === who);
-    if(idxs.length === 0){
-      el.innerHTML = '<div class="act-col-empty">－</div>';
-      return;
-    }
-    const order = idxs.slice().sort((ia,ib)=>{
-      const ta = allItems[ia].timeStart, tb = allItems[ib].timeStart;
-      if(!ta && !tb) return ia - ib;
-      if(!ta) return 1;
-      if(!tb) return -1;
-      return ta.localeCompare(tb) || (ia - ib);
+  if(allItems.length === 0){
+    el.innerHTML = '<div class="act-timeline-empty">還沒有安排</div>';
+    return;
+  }
+
+  const order = allItems.map((a,i)=>i).sort((ia,ib)=>{
+    const ta = allItems[ia].timeStart, tb = allItems[ib].timeStart;
+    if(!ta && !tb) return ia - ib;
+    if(!ta) return 1;
+    if(!tb) return -1;
+    return ta.localeCompare(tb) || (ia - ib);
+  });
+
+  el.innerHTML = order.map(i => {
+    const a = allItems[i];
+    const who = a.who || 'shared';
+    return renderActivityCard(a, i, date, who);
+  }).join('');
+
+  el.querySelectorAll('.activity-del').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      state.activities[date].splice(parseInt(b.dataset.i),1);
+      renderActivities(date);
+      renderStay();
+      writePath('activities/'+date, state.activities[date]);
     });
-    el.innerHTML = order.map(i => renderActivityCard(allItems[i], i, date, who)).join('');
-    el.querySelectorAll('.activity-del').forEach(b=>{
-      b.addEventListener('click', ()=>{
-        state.activities[date].splice(parseInt(b.dataset.i),1);
-        renderActivities(date);
-        renderStay();
-        writePath('activities/'+date, state.activities[date]);
-      });
-    });
-    el.querySelectorAll('.activity-edit').forEach(b=>{
-      b.addEventListener('click', ()=>editActivity(date, parseInt(b.dataset.i)));
-    });
+  });
+  el.querySelectorAll('.activity-edit').forEach(b=>{
+    b.addEventListener('click', ()=>editActivity(date, parseInt(b.dataset.i)));
   });
 }
 
