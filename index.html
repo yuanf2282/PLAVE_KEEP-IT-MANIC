@@ -13,11 +13,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
 :root{
-  --ink:#f2ede7;
-  --ink-soft:#9d938a;
-  --paper:#0c0a0a;
-  --paper-raised:#171414;
-  --paper-line:#2c2523;
+  --ink:#241f1a;
+  --ink-soft:#8f8478;
+  --paper:#f4efe6;
+  --paper-raised:#ffffff;
+  --paper-line:#e0d6c8;
   --red:#e8271f;
   --red-dark:#7d130f;
   --red-glow:#ff5c4d;
@@ -31,8 +31,8 @@
   --incheon-light:#f7d569;
   --busan:#22b8a0;
   --busan-light:#7fdfce;
-  --yuan:#4dd0e1;
-  --qixuan:#ffd166;
+  --yuan:#0e8fa8;
+  --qixuan:#c98a00;
   --font-display:'Noto Sans TC', sans-serif;
   --font-poster:'Anton', 'Noto Sans TC', sans-serif;
   --font-body:'Noto Sans TC', sans-serif;
@@ -111,10 +111,16 @@ body{
   padding:44px 20px 30px;
   border-bottom:1px solid var(--paper-line);
   overflow:hidden;
+  --ink:#f2ede7;
+  --ink-soft:#9d938a;
+  --paper:#0c0a0a;
+  --paper-raised:#171414;
+  --paper-line:#2c2523;
   background:
     radial-gradient(ellipse 120% 90% at 50% -10%, rgba(232,39,31,.35), transparent 60%),
     repeating-conic-gradient(from 0deg at 50% 0%, rgba(255,92,77,.05) 0deg 6deg, transparent 6deg 12deg),
     var(--paper);
+  color:var(--ink);
 }
 .hero::after{
   content:"";
@@ -464,6 +470,11 @@ body{
   background:var(--paper-raised);color:var(--ink);width:100%;
 }
 .act-form select.act-currency{flex:0 0 108px;width:auto;}
+#actDate{
+  font-family:var(--font-body);font-weight:700;font-size:14px;
+  padding:9px 11px;border:1px solid var(--paper-line);border-radius:4px;
+  background:var(--paper-raised);color:var(--red);width:100%;
+}
 .act-time-row{align-items:center;}
 .act-time-row input[type=time]{
   flex:1;font-family:var(--font-mono);font-size:13.5px;
@@ -904,8 +915,8 @@ h2.section-title{
       <h3 id="activityModalTitle">新增行程</h3>
       <button type="button" class="activity-modal-close" id="activityModalCloseBtn" aria-label="關閉">×</button>
     </div>
-    <p class="activity-modal-date" id="activityModalDate"></p>
     <div class="activity-modal-body">
+      <select id="actDate"></select>
       <input type="text" id="actName" placeholder="行程名稱">
       <div class="act-form-row">
         <select id="actCategory">
@@ -1294,18 +1305,26 @@ let modalEditIndex = null;
 
 const activityModalOverlay = document.getElementById('activityModalOverlay');
 const activityModalTitle = document.getElementById('activityModalTitle');
-const activityModalDate = document.getElementById('activityModalDate');
 const activityModalSubmit = document.getElementById('activityModalSubmit');
+const actDateSelect = document.getElementById('actDate');
 
 function fmtModalDate(date){
   const d = new Date(date + 'T00:00:00');
-  return (d.getMonth()+1) + '/' + d.getDate() + ' 週' + WD[d.getDay()];
+  return (d.getMonth()+1) + '/' + d.getDate() + '（週' + WD[d.getDay()] + '）';
 }
+
+// 日期下拉選單只需要建立一次
+DAYS_DEF.forEach(day=>{
+  const opt = document.createElement('option');
+  opt.value = day.date;
+  opt.textContent = fmtModalDate(day.date);
+  actDateSelect.appendChild(opt);
+});
 
 function openActivityModal(date, editIndex){
   modalDate = date;
   modalEditIndex = (editIndex === undefined) ? null : editIndex;
-  activityModalDate.textContent = fmtModalDate(date);
+  actDateSelect.value = date;
 
   if(modalEditIndex !== null){
     const item = normalizeActivity(state.activities[date][modalEditIndex]);
@@ -1348,11 +1367,19 @@ function closeActivityModal(){
 
 document.getElementById('activityModalCloseBtn').addEventListener('click', closeActivityModal);
 document.getElementById('activityModalCancel').addEventListener('click', closeActivityModal);
+
+// 只有「按下」跟「放開」都發生在遮罩本身（而不是視窗內容）才關閉，
+// 這樣用滑鼠在輸入框內選取文字、不小心拖到視窗外面放開時，不會誤觸關閉。
+let modalMouseDownOnOverlay = false;
+activityModalOverlay.addEventListener('mousedown', (e)=>{
+  modalMouseDownOnOverlay = (e.target === activityModalOverlay);
+});
 activityModalOverlay.addEventListener('click', (e)=>{
-  if(e.target === activityModalOverlay) closeActivityModal();
+  if(e.target === activityModalOverlay && modalMouseDownOnOverlay) closeActivityModal();
+  modalMouseDownOnOverlay = false;
 });
 activityModalSubmit.addEventListener('click', ()=>{
-  if(modalDate) saveActivityFromModal(modalDate);
+  saveActivityFromModal();
 });
 
 const CAT_CLASS = {'吃喝':'cat-eat','交通':'cat-transit','景點':'cat-sight','觀光':'cat-sight','演唱會':'cat-concert','住宿':'cat-stay','其他':'cat-other'};
@@ -1461,7 +1488,7 @@ function editActivity(date, idx){
   openActivityModal(date, idx);
 }
 
-function saveActivityFromModal(date){
+function saveActivityFromModal(){
   const nameEl = document.getElementById('actName');
   const catEl = document.getElementById('actCategory');
   const addrEl = document.getElementById('actAddress');
@@ -1477,6 +1504,9 @@ function saveActivityFromModal(date){
   if(!name){ nameEl.focus(); return; }
 
   const who = (shareEl && shareEl.checked) ? 'shared' : (currentUser || 'shared');
+  const originalDate = modalDate;
+  const targetDate = actDateSelect.value;
+  const editIndex = modalEditIndex;
 
   const entry = {
     name,
@@ -1491,18 +1521,28 @@ function saveActivityFromModal(date){
     who: who
   };
 
-  if(!state.activities[date]) state.activities[date] = [];
+  if(!state.activities[targetDate]) state.activities[targetDate] = [];
 
-  if(modalEditIndex !== null){
-    state.activities[date][modalEditIndex] = entry;
+  const dateChanged = (editIndex !== null) && (targetDate !== originalDate);
+
+  if(editIndex !== null && !dateChanged){
+    // 同一天，直接原地更新
+    state.activities[originalDate][editIndex] = entry;
+  }else if(editIndex !== null && dateChanged){
+    // 換了日期：從原本那天移除，加到新的那天
+    state.activities[originalDate].splice(editIndex, 1);
+    state.activities[targetDate].push(entry);
   }else{
-    state.activities[date].push(entry);
+    // 新增
+    state.activities[targetDate].push(entry);
   }
 
   closeActivityModal();
-  renderActivities(date);
+  renderActivities(targetDate);
+  if(dateChanged) renderActivities(originalDate);
   renderStay();
-  writePath('activities/'+date, state.activities[date]);
+  writePath('activities/'+targetDate, state.activities[targetDate]);
+  if(dateChanged) writePath('activities/'+originalDate, state.activities[originalDate]);
 }
 
 function renderStay(){
