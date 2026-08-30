@@ -193,14 +193,19 @@ body{
 .dday-label{font-size:12px;color:var(--ink-soft);}
 
 .map-wrap{
-  margin:30px 0 4px;
+  margin:30px auto 4px;
   border:1px solid var(--paper-line);
   border-radius:8px;
   overflow:hidden;
   background:var(--paper-raised);
   padding:12px 8px 4px;
+  max-width:260px;
+  aspect-ratio:1/1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.schema-map{width:100%;height:auto;display:block;}
+.schema-map{width:100%;height:100%;display:block;}
 .schema-land{fill:#141010;stroke:var(--paper-line);stroke-width:1.5;}
 .schema-line{fill:none;stroke-width:2.5;stroke-dasharray:5 5;}
 .schema-line.to-incheon{stroke:var(--incheon);}
@@ -690,10 +695,12 @@ textarea.notes-area{min-height:130px;resize:vertical;line-height:1.6;font-size:1
 .todo-row.done .todo-text{text-decoration:line-through;color:var(--ink-soft);}
 
 h2.section-title{
-  font-family:var(--font-display);
-  font-weight:400;
-  font-size:22px;margin:0 0 16px;
-  letter-spacing:.01em;
+  font-family:var(--font-body);
+  font-weight:900;
+  font-size:22px;
+  color:var(--ink);
+  letter-spacing:.02em;
+  margin:0 0 16px;
 }
 
 .empty{color:var(--ink-soft);font-size:13px;padding:6px 0 18px;}
@@ -760,7 +767,7 @@ h2.section-title{
 
         <g class="schema-stop schema-stop-mini" data-city="cheongju" tabindex="-1" aria-hidden="true">
           <circle class="schema-dot cheongju" cx="146" cy="134" r="4"/>
-          <text class="schema-city schema-city-mini" text-anchor="start" x="152" y="132">청주 CJJ</text>
+          <text class="schema-city schema-city-mini" text-anchor="start" x="152" y="132">清州 CJJ</text>
           <text class="schema-date" text-anchor="start" x="152" y="141">9/8 抵達</text>
         </g>
 
