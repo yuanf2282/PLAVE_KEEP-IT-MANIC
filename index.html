@@ -685,7 +685,11 @@ textarea.notes-area{min-height:130px;resize:vertical;line-height:1.6;font-size:1
   border-radius:6px;
   display:flex;justify-content:space-between;align-items:baseline;
 }
+.total-box.total-yuan{background:var(--yuan);}
+.total-box.total-qixuan{background:var(--qixuan);}
 .total-box .label{font-size:13px;color:#ffd9d6;}
+.total-box.total-yuan .label,
+.total-box.total-qixuan .label{color:rgba(255,255,255,.85);}
 .total-box .amt{font-family:var(--font-mono);font-weight:700;font-size:22px;}
 .split-note{font-size:12px;color:var(--ink-soft);margin-top:8px;}
 
@@ -1613,7 +1617,16 @@ function renderStay(){
     list.innerHTML = rows.map(r=>{
       const d = new Date(r.date+'T00:00:00');
       const cur = r.currency || '₩';
-      const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
+      const who = r.who || 'shared';
+      let metaText;
+      if(who === 'shared'){
+        const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
+        metaText = r.splitCost
+          ? `兩人合計，一人份 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}`
+          : `共同行程，兩人各付 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}`;
+      }else{
+        metaText = `僅 ${escapeHtml(whoLabel(who))} 需付這筆費用`;
+      }
       return `
         <div class="stay-item">
           <div class="stay-top">
@@ -1623,7 +1636,7 @@ function renderStay(){
             <span class="stay-amt">${escapeHtml(cur)}${Number(r.cost||0).toLocaleString()}</span>
           </div>
           <div class="stay-meta">
-            ${r.splitCost ? `兩人合計，一人份 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}` : '單人金額，不需再平分'}
+            ${metaText}
             ${r.address ? ' · ' + escapeHtml(r.address) : ''}
             ${r.mapUrl ? ` · <a href="${escapeHtml(r.mapUrl)}" target="_blank" rel="noopener">Naver/Google Maps</a>` : ''}
           </div>
@@ -1632,13 +1645,24 @@ function renderStay(){
     }).join('');
   }
 
+  // 依 who 分開計算：共同行程兩人各自都要算一份；
+  // 個人行程只算在該人身上，不參與的另一人不計入。
   const totalsByCurrency = {};
   rows.forEach(r=>{
     const cur = r.currency || '₩';
-    const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
-    if(!totalsByCurrency[cur]) totalsByCurrency[cur] = { raw:0, perPerson:0 };
+    const who = r.who || 'shared';
+    if(!totalsByCurrency[cur]) totalsByCurrency[cur] = { raw:0, yuan:0, qixuan:0 };
     totalsByCurrency[cur].raw += Number(r.cost || 0);
-    totalsByCurrency[cur].perPerson += perPerson;
+
+    if(who === 'shared'){
+      const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
+      totalsByCurrency[cur].yuan += perPerson;
+      totalsByCurrency[cur].qixuan += perPerson;
+    }else if(who === 'yuan'){
+      totalsByCurrency[cur].yuan += Number(r.cost);
+    }else if(who === 'qixuan'){
+      totalsByCurrency[cur].qixuan += Number(r.cost);
+    }
   });
 
   const totalsEl = document.getElementById('stayTotals');
@@ -1648,13 +1672,17 @@ function renderStay(){
   }else{
     totalsEl.innerHTML = currencies.map(cur=>{
       const t = totalsByCurrency[cur];
-      const label = cur === '₩' ? '韓元・每人預估花費' : cur === 'NT$' ? '台幣・每人預估花費' : (cur + '・每人預估花費');
+      const curLabel = cur === '₩' ? '韓元' : cur === 'NT$' ? '台幣' : cur;
       return `
-        <div class="total-box">
-          <div><div class="label">${label}</div></div>
-          <div class="amt">${escapeHtml(cur)}${Math.round(t.perPerson).toLocaleString()}</div>
+        <div class="total-box total-yuan">
+          <div><div class="label">${curLabel}・Yuan 預估花費</div></div>
+          <div class="amt">${escapeHtml(cur)}${Math.round(t.yuan).toLocaleString()}</div>
         </div>
-        <p class="split-note">已依「住宿等平分項目」計算，原始金額加總 ${escapeHtml(cur)}${t.raw.toLocaleString()}</p>
+        <div class="total-box total-qixuan">
+          <div><div class="label">${curLabel}・琪萱 預估花費</div></div>
+          <div class="amt">${escapeHtml(cur)}${Math.round(t.qixuan).toLocaleString()}</div>
+        </div>
+        <p class="split-note">${curLabel}原始金額加總 ${escapeHtml(cur)}${t.raw.toLocaleString()}</p>
       `;
     }).join('');
   }
