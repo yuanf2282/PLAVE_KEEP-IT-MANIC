@@ -960,6 +960,10 @@ h2.section-title{
           <option value="NT$">NT$ 台幣</option>
         </select>
       </div>
+      <label class="act-share-row">
+        <input type="checkbox" id="actSplitCost">
+        <span>這筆金額是兩人合計，平分後才是一人份（例如住宿總價）</span>
+      </label>
       <div class="act-form-row act-time-row">
         <input type="time" id="actTimeStart">
         <span class="act-time-sep">~</span>
@@ -1365,6 +1369,7 @@ function openActivityModal(date, editIndex){
     document.getElementById('actTimeStart').value = item.timeStart || '';
     document.getElementById('actTimeEnd').value = item.timeEnd || '';
     document.getElementById('actShare').checked = (item.who || 'shared') === 'shared';
+    document.getElementById('actSplitCost').checked = !!item.splitCost;
     activityModalTitle.textContent = '編輯行程';
     activityModalSubmit.textContent = '更新這個行程';
   }else{
@@ -1378,6 +1383,7 @@ function openActivityModal(date, editIndex){
     document.getElementById('actTimeStart').value = '';
     document.getElementById('actTimeEnd').value = '';
     document.getElementById('actShare').checked = true;
+    document.getElementById('actSplitCost').checked = defaultSplitCost('吃喝');
     activityModalTitle.textContent = '新增行程';
     activityModalSubmit.textContent = '新增這個行程';
   }
@@ -1385,6 +1391,15 @@ function openActivityModal(date, editIndex){
   activityModalOverlay.removeAttribute('hidden');
   document.getElementById('actName').focus();
 }
+
+// 換分類時，幫忙帶入常見的預設（住宿→打勾平分；交通/景點→不打勾），
+// 吃喝/演唱會/其他留給使用者自己決定，不強制覆蓋。
+document.getElementById('actCategory').addEventListener('change', (e)=>{
+  const cat = e.target.value;
+  const splitEl = document.getElementById('actSplitCost');
+  if(cat === '住宿') splitEl.checked = true;
+  else if(cat === '交通' || cat === '景點') splitEl.checked = false;
+});
 
 function closeActivityModal(){
   activityModalOverlay.setAttribute('hidden','');
@@ -1412,9 +1427,14 @@ activityModalSubmit.addEventListener('click', ()=>{
 const CAT_CLASS = {'吃喝':'cat-eat','交通':'cat-transit','景點':'cat-sight','觀光':'cat-sight','演唱會':'cat-concert','住宿':'cat-stay','其他':'cat-other'};
 const CAT_COLOR = {'吃喝':'var(--red)','交通':'var(--incheon)','景點':'var(--busan)','觀光':'var(--busan)','演唱會':'var(--gold)','住宿':'var(--ink-soft)','其他':'#4a423d'};
 
+function defaultSplitCost(category){
+  return category === '住宿';
+}
 function normalizeActivity(item){
-  if(typeof item === 'string') return {name:item, category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared'};
-  return Object.assign({name:'', category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared'}, item);
+  if(typeof item === 'string') return {name:item, category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared', splitCost:false};
+  const base = Object.assign({name:'', category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared'}, item);
+  if(typeof base.splitCost !== 'boolean') base.splitCost = defaultSplitCost(base.category);
+  return base;
 }
 
 function partnerName(who){
@@ -1529,6 +1549,7 @@ function saveActivityFromModal(){
   const startEl = document.getElementById('actTimeStart');
   const endEl = document.getElementById('actTimeEnd');
   const shareEl = document.getElementById('actShare');
+  const splitCostEl = document.getElementById('actSplitCost');
 
   const name = nameEl.value.trim();
   if(!name){ nameEl.focus(); return; }
@@ -1548,7 +1569,8 @@ function saveActivityFromModal(){
     notes: notesEl.value.trim(),
     timeStart: startEl.value,
     timeEnd: endEl.value,
-    who: who
+    who: who,
+    splitCost: !!(splitCostEl && splitCostEl.checked)
   };
 
   if(!state.activities[targetDate]) state.activities[targetDate] = [];
@@ -1591,6 +1613,7 @@ function renderStay(){
     list.innerHTML = rows.map(r=>{
       const d = new Date(r.date+'T00:00:00');
       const cur = r.currency || '₩';
+      const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
       return `
         <div class="stay-item">
           <div class="stay-top">
@@ -1599,10 +1622,11 @@ function renderStay(){
             <div class="stay-name">${escapeHtml(r.name)}</div>
             <span class="stay-amt">${escapeHtml(cur)}${Number(r.cost||0).toLocaleString()}</span>
           </div>
-          ${r.address || r.mapUrl ? `<div class="stay-meta">
-            ${r.address ? escapeHtml(r.address) : ''}
+          <div class="stay-meta">
+            ${r.splitCost ? `兩人合計，一人份 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}` : '單人金額，不需再平分'}
+            ${r.address ? ' · ' + escapeHtml(r.address) : ''}
             ${r.mapUrl ? ` · <a href="${escapeHtml(r.mapUrl)}" target="_blank" rel="noopener">Naver/Google Maps</a>` : ''}
-          </div>` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -1611,7 +1635,10 @@ function renderStay(){
   const totalsByCurrency = {};
   rows.forEach(r=>{
     const cur = r.currency || '₩';
-    totalsByCurrency[cur] = (totalsByCurrency[cur] || 0) + Number(r.cost || 0);
+    const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
+    if(!totalsByCurrency[cur]) totalsByCurrency[cur] = { raw:0, perPerson:0 };
+    totalsByCurrency[cur].raw += Number(r.cost || 0);
+    totalsByCurrency[cur].perPerson += perPerson;
   });
 
   const totalsEl = document.getElementById('stayTotals');
@@ -1620,14 +1647,14 @@ function renderStay(){
     totalsEl.innerHTML = '';
   }else{
     totalsEl.innerHTML = currencies.map(cur=>{
-      const total = totalsByCurrency[cur];
-      const label = cur === '₩' ? '韓元總計' : cur === 'NT$' ? '台幣總計' : (cur + ' 總計');
+      const t = totalsByCurrency[cur];
+      const label = cur === '₩' ? '韓元・每人預估花費' : cur === 'NT$' ? '台幣・每人預估花費' : (cur + '・每人預估花費');
       return `
         <div class="total-box">
           <div><div class="label">${label}</div></div>
-          <div class="amt">${escapeHtml(cur)}${total.toLocaleString()}</div>
+          <div class="amt">${escapeHtml(cur)}${Math.round(t.perPerson).toLocaleString()}</div>
         </div>
-        <p class="split-note">兩人平分每人 ${escapeHtml(cur)}${Math.round(total/2).toLocaleString()}</p>
+        <p class="split-note">已依「住宿等平分項目」計算，原始金額加總 ${escapeHtml(cur)}${t.raw.toLocaleString()}</p>
       `;
     }).join('');
   }
