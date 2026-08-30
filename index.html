@@ -401,7 +401,8 @@ body{
 }
 
 .activity-card{
-  padding:12px 14px;
+  position:relative;
+  padding:12px 60px 12px 14px;
   margin-bottom:10px;
   background:var(--card-bg);
   border:1px solid var(--paper-line);
@@ -413,7 +414,7 @@ body{
   border-color:var(--gold);
 }
 .activity-card.is-transit{
-  padding:8px 12px;
+  padding:8px 52px 8px 12px;
   background:transparent;
   border-style:dashed;
 }
@@ -423,22 +424,25 @@ body{
 .activity-card.is-transit .activity-time{font-size:11px;margin-top:2px;}
 .activity-card.is-transit .activity-meta{margin-top:4px;font-size:11px;gap:3px;}
 .activity-card.is-transit .activity-notes{margin-top:5px;padding-top:5px;font-size:11px;}
-.activity-card.is-transit .activity-del,
-.activity-card.is-transit .activity-edit{width:24px;height:24px;}
+.activity-card.is-transit .activity-actions .activity-del,
+.activity-card.is-transit .activity-actions .activity-edit{width:24px;height:24px;}
 .act-row .activity-card.is-transit{max-width:64%;}
 .act-row .activity-card.is-concert{max-width:96%;}
 .activity-card:last-child{margin-bottom:0;}
 .activity-top{display:flex;gap:8px;}
 .activity-name{flex:1;font-weight:700;font-size:18px;line-height:1.3;align-self:flex-start;margin:0;word-break:keep-all;overflow-wrap:break-word;}
+.activity-actions{
+  position:absolute;
+  top:8px;right:8px;
+  display:flex;gap:2px;
+  z-index:2;
+}
 .activity-del,.activity-edit{
   display:inline-flex;align-items:center;justify-content:center;
-  width:30px;height:30px;
+  width:28px;height:28px;
   background:none;border:none;color:var(--ink-soft);
   cursor:pointer;line-height:1;padding:0;flex:0 0 auto;
-  align-self:flex-end;
 }
-.activity-del{margin-left:6px;}
-.activity-edit{margin-left:4px;}
 .activity-edit:hover,.activity-del:hover{color:var(--ink);}
 .act-tag{
   flex:0 0 auto;
@@ -1443,17 +1447,19 @@ function renderActivityCard(a, i, date, who){
   const isConcert = a.category === '演唱會';
   const isTransit = a.category === '交通';
   const actionsHtml = editable ? `
-      <button class="activity-edit" data-date="${date}" data-i="${i}" aria-label="編輯"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg></button>
-      <button class="activity-del" data-date="${date}" data-i="${i}" aria-label="刪除"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
+    <div class="activity-actions">
+      <button class="activity-edit" data-date="${date}" data-i="${i}" aria-label="編輯"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg></button>
+      <button class="activity-del" data-date="${date}" data-i="${i}" aria-label="刪除"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg></button>
+    </div>
   ` : '';
   return `
   <div class="act-row owner-${who}">
     <div class="activity-card ${isConcert ? 'is-concert' : ''} ${isTransit ? 'is-transit' : ''} ${editable ? '' : 'not-editable'}" style="--cat-color:${CAT_COLOR[a.category]||'var(--ink-soft)'}">
+      ${actionsHtml}
       <div class="activity-owner-label owner-${who}">${escapeHtml(whoLabel(who))}</div>
       <div class="activity-top">
         <span class="act-tag ${CAT_CLASS[a.category]||'cat-other'}">${escapeHtml(a.category)}</span>
         <div class="activity-name">${escapeHtml(a.name)}</div>
-        ${actionsHtml}
       </div>
       ${formatTimeRange(a) ? `<div class="activity-time">${formatTimeRange(a)}</div>` : ''}
       ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
