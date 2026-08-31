@@ -699,6 +699,27 @@ textarea.notes-area{min-height:130px;resize:vertical;line-height:1.6;font-size:1
 .total-box .amt{font-family:var(--font-mono);font-weight:700;font-size:22px;}
 .split-note{font-size:12px;color:var(--ink-soft);margin-top:8px;}
 
+.repay-title{
+  font-family:var(--font-body);font-weight:900;font-size:16px;
+  margin:28px 0 4px;color:var(--ink);
+}
+.repay-form{
+  display:flex;flex-direction:column;gap:8px;
+  padding:14px;margin-bottom:14px;
+  background:var(--paper-raised);
+  border:1px solid var(--paper-line);border-radius:8px;
+}
+.repay-item{
+  padding:10px 0;
+  border-bottom:1px dashed var(--paper-line);
+  display:flex;align-items:center;gap:10px;
+}
+.repay-item:last-child{border-bottom:none;}
+.repay-item-main{flex:1;min-width:0;}
+.repay-item-direction{font-weight:700;font-size:13.5px;}
+.repay-item-meta{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+.repay-item-amt{font-family:var(--font-mono);font-weight:700;font-size:14px;color:var(--ink);flex:0 0 auto;}
+
 .todo-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--paper-line);}
 .todo-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--red);flex:0 0 auto;}
 .todo-text{flex:1;font-size:14px;}
@@ -892,6 +913,25 @@ h2.section-title{
     <div id="staySettleView" hidden>
       <p class="empty" style="padding:0 0 16px;">當某筆「共同・需要平分」的行程被其中一人先全額付掉時，這裡會自動算出誰要轉多少錢給誰。要記錄「先付款」，請到「行程」編輯該筆行程，勾選共同行程＋平分後，選擇是誰先付的。</p>
       <div id="settleList"></div>
+
+      <h3 class="repay-title">還款紀錄</h3>
+      <p class="empty" style="padding:0 0 12px;">欠錢的一方不見得會一次還清，這裡可以分好幾次記錄「已經還了多少」，系統會自動從欠款裡扣掉，算出目前實際還欠多少。</p>
+      <div class="repay-form">
+        <select id="repayDirection">
+          <option value="qixuan-to-yuan">琪萱 → Yuan（琪萱還錢給 Yuan）</option>
+          <option value="yuan-to-qixuan">Yuan → 琪萱（Yuan 還錢給琪萱）</option>
+        </select>
+        <div class="act-form-row">
+          <input type="number" id="repayAmount" placeholder="還款金額">
+          <select id="repayCurrency" class="act-currency">
+            <option value="₩">₩ 韓元</option>
+            <option value="NT$">NT$ 台幣</option>
+          </select>
+        </div>
+        <input type="text" id="repayNote" placeholder="備註（例如：現金當面還、轉帳等，選填）">
+        <button class="btn" id="repayAddBtn">記錄這筆還款</button>
+      </div>
+      <div id="repayList"></div>
     </div>
   </div>
 
@@ -1091,7 +1131,8 @@ const SEED_ACTIVITIES = {
 let state = {
   activities: JSON.parse(JSON.stringify(SEED_ACTIVITIES)),
   todos: { yuan:[], qixuan:[], shared:[] },
-  notes: { yuan:'', qixuan:'', shared:'' }
+  notes: { yuan:'', qixuan:'', shared:'' },
+  repayments: []
 };
 
 const LOCAL_KEY = 'trip-seoul-incheon-busan-plave';
@@ -1136,6 +1177,7 @@ function initSync(){
       state.activities = (val.activities && Object.keys(val.activities).length) ? val.activities : JSON.parse(JSON.stringify(SEED_ACTIVITIES));
       state.todos = val.todos || {yuan:[],qixuan:[],shared:[]};
       state.notes = val.notes || {yuan:'',qixuan:'',shared:''};
+      state.repayments = val.repayments || [];
       renderAll();
       updateSyncTime();
     }, err=>{
@@ -1741,11 +1783,6 @@ function renderSettle(rows){
   // 只有「共同・需要平分・且有指定先付款人」的項目才需要分帳
   const settleRows = rows.filter(r => (r.who || 'shared') === 'shared' && r.splitCost && (r.paidBy === 'yuan' || r.paidBy === 'qixuan'));
 
-  if(settleRows.length === 0){
-    el.innerHTML = '<div class="empty">目前沒有需要分帳的項目。到「行程」把某筆共同・需要平分的行程，選擇是誰先付的，這裡就會自動算給你看。</div>';
-    return;
-  }
-
   const byCurrency = {};
   settleRows.forEach(r=>{
     const cur = r.currency || '₩';
@@ -1756,39 +1793,116 @@ function renderSettle(rows){
     byCurrency[cur].items.push(r);
   });
 
-  el.innerHTML = Object.keys(byCurrency).map(cur=>{
-    const info = byCurrency[cur];
-    const curLabel = cur === '₩' ? '韓元' : cur === 'NT$' ? '台幣' : cur;
-    const net = Math.round(info.net);
-    let summaryHtml;
-    if(net === 0){
-      summaryHtml = `<div class="total-box"><div><div class="label">${curLabel}・結算結果</div></div><div class="amt">兩人已結清</div></div>`;
-    }else if(net > 0){
-      summaryHtml = `<div class="total-box total-qixuan"><div><div class="label">${curLabel}・琪萱需轉給 Yuan</div></div><div class="amt">${escapeHtml(cur)}${net.toLocaleString()}</div></div>`;
-    }else{
-      summaryHtml = `<div class="total-box total-yuan"><div><div class="label">${curLabel}・Yuan需轉給琪萱</div></div><div class="amt">${escapeHtml(cur)}${Math.abs(net).toLocaleString()}</div></div>`;
-    }
+  // 把已回報的還款也一併扣進淨額：琪萱還給 Yuan → 抵掉琪萱欠 Yuan 的部分；反之亦然。
+  const repayments = state.repayments || [];
+  repayments.forEach(rp=>{
+    const cur = rp.currency || '₩';
+    if(!byCurrency[cur]) byCurrency[cur] = { items: [], net: 0 };
+    if(rp.direction === 'qixuan-to-yuan') byCurrency[cur].net -= Number(rp.amount);
+    else byCurrency[cur].net += Number(rp.amount);
+  });
 
-    const itemsHtml = info.items.map(r=>{
-      const d = new Date(r.date+'T00:00:00');
-      const half = Math.round(Number(r.cost)/2);
-      const payer = r.paidBy === 'yuan' ? 'Yuan' : '琪萱';
-      const ower = r.paidBy === 'yuan' ? '琪萱' : 'Yuan';
-      return `
-        <div class="stay-item">
-          <div class="stay-top">
-            <span class="stay-date">${d.getMonth()+1}/${d.getDate()}</span>
-            <div class="stay-name">${escapeHtml(r.name)}</div>
-            <span class="stay-amt">${escapeHtml(cur)}${Number(r.cost).toLocaleString()}</span>
+  const currencies = Object.keys(byCurrency);
+  if(currencies.length === 0){
+    el.innerHTML = '<div class="empty">目前沒有需要分帳的項目。到「行程」把某筆共同・需要平分的行程，選擇是誰先付的，這裡就會自動算給你看。</div>';
+  }else{
+    el.innerHTML = currencies.map(cur=>{
+      const info = byCurrency[cur];
+      const curLabel = cur === '₩' ? '韓元' : cur === 'NT$' ? '台幣' : cur;
+      const net = Math.round(info.net);
+      let summaryHtml;
+      if(net === 0){
+        summaryHtml = `<div class="total-box"><div><div class="label">${curLabel}・結算結果</div></div><div class="amt">兩人已結清</div></div>`;
+      }else if(net > 0){
+        summaryHtml = `<div class="total-box total-qixuan"><div><div class="label">${curLabel}・琪萱目前還欠 Yuan</div></div><div class="amt">${escapeHtml(cur)}${net.toLocaleString()}</div></div>`;
+      }else{
+        summaryHtml = `<div class="total-box total-yuan"><div><div class="label">${curLabel}・Yuan目前還欠琪萱</div></div><div class="amt">${escapeHtml(cur)}${Math.abs(net).toLocaleString()}</div></div>`;
+      }
+
+      const itemsHtml = info.items.map(r=>{
+        const d = new Date(r.date+'T00:00:00');
+        const half = Math.round(Number(r.cost)/2);
+        const payer = r.paidBy === 'yuan' ? 'Yuan' : '琪萱';
+        const ower = r.paidBy === 'yuan' ? '琪萱' : 'Yuan';
+        return `
+          <div class="stay-item">
+            <div class="stay-top">
+              <span class="stay-date">${d.getMonth()+1}/${d.getDate()}</span>
+              <div class="stay-name">${escapeHtml(r.name)}</div>
+              <span class="stay-amt">${escapeHtml(cur)}${Number(r.cost).toLocaleString()}</span>
+            </div>
+            <div class="stay-meta">${escapeHtml(payer)} 先付了全額，${escapeHtml(ower)} 欠 ${escapeHtml(payer)} ${escapeHtml(cur)}${half.toLocaleString()}</div>
           </div>
-          <div class="stay-meta">${escapeHtml(payer)} 先付了全額，${escapeHtml(ower)} 欠 ${escapeHtml(payer)} ${escapeHtml(cur)}${half.toLocaleString()}</div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
 
-    return summaryHtml + itemsHtml;
-  }).join('');
+      return summaryHtml + itemsHtml;
+    }).join('');
+  }
+
+  renderRepayments();
 }
+
+function renderRepayments(){
+  const el = document.getElementById('repayList');
+  if(!el) return;
+  const repayments = state.repayments || [];
+  if(repayments.length === 0){
+    el.innerHTML = '<div class="empty">還沒有還款紀錄</div>';
+    return;
+  }
+  const order = repayments.map((r,i)=>i).sort((ia,ib)=>{
+    return (repayments[ib].date||'').localeCompare(repayments[ia].date||'');
+  });
+  el.innerHTML = order.map(i=>{
+    const r = repayments[i];
+    const dirLabel = r.direction === 'qixuan-to-yuan' ? '琪萱 → Yuan' : 'Yuan → 琪萱';
+    const d = r.date ? new Date(r.date) : null;
+    const dateLabel = d ? (d.getMonth()+1)+'/'+d.getDate() : '';
+    return `
+      <div class="repay-item">
+        <div class="repay-item-main">
+          <div class="repay-item-direction">${escapeHtml(dirLabel)}</div>
+          <div class="repay-item-meta">${dateLabel}${r.note ? ' · ' + escapeHtml(r.note) : ''}</div>
+        </div>
+        <div class="repay-item-amt">${escapeHtml(r.currency||'₩')}${Number(r.amount).toLocaleString()}</div>
+        <button class="activity-del" data-i="${i}" aria-label="刪除這筆還款紀錄">×</button>
+      </div>
+    `;
+  }).join('');
+  el.querySelectorAll('.activity-del').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      state.repayments.splice(parseInt(b.dataset.i),1);
+      renderRepayments();
+      renderStay();
+      writePath('repayments', state.repayments);
+    });
+  });
+}
+
+document.getElementById('repayAddBtn').addEventListener('click', ()=>{
+  const direction = document.getElementById('repayDirection').value;
+  const amountEl = document.getElementById('repayAmount');
+  const currency = document.getElementById('repayCurrency').value;
+  const noteEl = document.getElementById('repayNote');
+  const amount = parseFloat(amountEl.value);
+  if(!amount || amount <= 0){ amountEl.focus(); return; }
+
+  if(!state.repayments) state.repayments = [];
+  state.repayments.push({
+    direction,
+    amount,
+    currency,
+    note: noteEl.value.trim(),
+    date: new Date().toISOString()
+  });
+
+  amountEl.value = '';
+  noteEl.value = '';
+  renderRepayments();
+  renderStay();
+  writePath('repayments', state.repayments);
+});
 
 const WHOS = ['yuan','qixuan','shared'];
 
