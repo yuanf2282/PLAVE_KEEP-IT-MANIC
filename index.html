@@ -480,6 +480,8 @@ body{
   font-size:13px;color:var(--ink-soft);line-height:1.6;
   white-space:pre-wrap;word-break:break-word;
 }
+.activity-notes a{color:var(--red);text-decoration:underline;text-decoration-style:dashed;text-underline-offset:2px;}
+.activity-notes a:hover{color:var(--red-dark);}
 
 .act-form{
   display:flex;flex-direction:column;gap:8px;
@@ -1577,7 +1579,7 @@ function renderActivityCard(a, i, date, who){
       </div>
       ${formatTimeRange(a) ? `<div class="activity-time">${formatTimeRange(a)}</div>` : ''}
       ${metaHtml ? `<div class="activity-meta">${metaHtml}</div>` : ''}
-      ${a.notes ? `<div class="activity-notes">${escapeHtml(a.notes)}</div>` : ''}
+      ${a.notes ? `<div class="activity-notes">${linkifyNotes(a.notes)}</div>` : ''}
     </div>
   </div>
 `;
@@ -2040,6 +2042,37 @@ function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+// 備註文字裡：支援 [顯示文字](網址) 語法自訂連結文字，
+// 也會自動把單純貼上的網址變成可點擊的連結。全部都先跳脫過 HTML，安全無虞。
+function linkifyNotes(text){
+  let safe = escapeHtml(text);
+  const placeholders = [];
+
+  // 先處理 [文字](網址) 這種自訂連結文字的語法
+  safe = safe.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url)=>{
+    const idx = placeholders.length;
+    placeholders.push(`<a href="${url}" target="_blank" rel="noopener">${label}</a>`);
+    return '\u0000' + idx + '\u0000';
+  });
+
+  // 剩下沒被上面語法包住的純網址，自動轉成可點擊連結
+  safe = safe.replace(/(https?:\/\/[^\s<]+)/g, (match)=>{
+    let url = match;
+    let trailing = '';
+    while(url.length && /[),.;:!?]$/.test(url)){
+      trailing = url.slice(-1) + trailing;
+      url = url.slice(0, -1);
+    }
+    if(!url) return match;
+    return `<a href="${url}" target="_blank" rel="noopener">${url}</a>${trailing}`;
+  });
+
+  // 把自訂連結文字塞回去
+  safe = safe.replace(/\u0000(\d+)\u0000/g, (match, idx)=> placeholders[parseInt(idx, 10)]);
+
+  return safe;
 }
 
 (function init(){
