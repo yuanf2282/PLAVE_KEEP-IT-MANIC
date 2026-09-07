@@ -543,6 +543,16 @@ body{
 .owner-dot.qixuan{background:var(--qixuan);}
 .owner-dot.shared{background:var(--ink-soft);}
 .activity-card.not-editable{opacity:.7;}
+.act-costmode-row select{font-weight:700;}
+.act-field-hint{font-size:12px;color:var(--ink-soft);margin:6px 2px 4px;}
+#actSeparateCostGroup,#expSeparateCostGroup{padding:10px;background:var(--paper);border:1px dashed var(--paper-line);border-radius:6px;margin-bottom:8px;}
+.quick-exp-btn{
+  display:block;width:100%;margin-bottom:16px;
+  background:none;border:1.5px dashed var(--paper-line);
+  color:var(--ink-soft);font-family:var(--font-body);font-weight:700;font-size:13.5px;
+  padding:12px 12px;border-radius:8px;cursor:pointer;
+}
+.quick-exp-btn:hover{border-color:var(--red);color:var(--red);}
 
 input[type=text],input[type=number],input[type=url],textarea{
   font-family:var(--font-body);
@@ -909,7 +919,8 @@ h2.section-title{
     </div>
 
     <div id="stayOverviewView">
-      <p class="empty" style="padding:0 0 16px;">列出跟你有關的行程費用（共同行程 + 你自己的行程），依幣別分開加總。要修改或刪除，請到「行程」分頁調整該項目。</p>
+      <p class="empty" style="padding:0 0 16px;">列出跟你有關的行程費用（共同行程 + 你自己的行程），依幣別分開加總。行程裡的費用請到「行程」分頁調整；不屬於任何行程的花費，用下面「快速記一筆」新增。</p>
+      <button class="quick-exp-btn" id="quickExpBtn" type="button">＋ 快速記一筆</button>
       <div id="stayList"></div>
       <div id="stayTotals"></div>
     </div>
@@ -1024,21 +1035,48 @@ h2.section-title{
           <option value="演唱會">演唱會</option>
           <option value="住宿">住宿</option>
         </select>
-        <input type="number" id="actCost" placeholder="費用">
-        <select id="actCurrency" class="act-currency">
-          <option value="₩">₩ 韓元</option>
-          <option value="NT$">NT$ 台幣</option>
+      </div>
+      <div class="act-form-row act-costmode-row" id="actCostModeRow">
+        <select id="actCostMode">
+          <option value="single">整體費用（一筆金額）</option>
+          <option value="separate">各自金額（分開輸入）</option>
         </select>
       </div>
-      <label class="act-share-row" id="actSplitCostRow">
-        <input type="checkbox" id="actSplitCost">
-        <span>這筆金額是兩人合計，平分後才是一人份（例如住宿總價）</span>
-      </label>
-      <div id="actPaidByRow">
-        <select id="actPaidBy">
-          <option value="">這筆先由誰付・尚未指定</option>
-          <option value="yuan">Yuan 先付了全額</option>
-          <option value="qixuan">琪萱 先付了全額</option>
+      <div id="actSingleCostGroup">
+        <div class="act-form-row">
+          <input type="number" id="actCost" placeholder="費用">
+          <select id="actCurrency" class="act-currency">
+            <option value="₩">₩ 韓元</option>
+            <option value="NT$">NT$ 台幣</option>
+          </select>
+        </div>
+        <label class="act-share-row" id="actSplitCostRow">
+          <input type="checkbox" id="actSplitCost">
+          <span>這筆金額是兩人合計，平分後才是一人份（例如住宿總價）</span>
+        </label>
+        <div id="actPaidByRow">
+          <select id="actPaidBy">
+            <option value="">這筆先由誰付・尚未指定</option>
+            <option value="yuan">Yuan 先付了全額</option>
+            <option value="qixuan">琪萱 先付了全額</option>
+          </select>
+        </div>
+      </div>
+      <div id="actSeparateCostGroup" hidden>
+        <p class="act-field-hint">各自付各的，單純加總記錄</p>
+        <div class="act-form-row">
+          <input type="number" id="actCostYuan" placeholder="Yuan 金額">
+          <input type="number" id="actCostQixuan" placeholder="琪萱 金額">
+          <select id="actSeparateCurrency" class="act-currency">
+            <option value="₩">₩</option>
+            <option value="NT$">NT$</option>
+          </select>
+        </div>
+        <label class="act-field-hint" for="actSeparatePaidBy">如果有人先幫忙代墊全部（沒有的話留空）</label>
+        <select id="actSeparatePaidBy">
+          <option value="">沒有人代墊，各自現場付清</option>
+          <option value="yuan">Yuan 先代墊了全部</option>
+          <option value="qixuan">琪萱 先代墊了全部</option>
         </select>
       </div>
       <div class="act-form-row act-time-row">
@@ -1053,6 +1091,81 @@ h2.section-title{
     <div class="activity-modal-actions">
       <button class="btn act-submit" id="activityModalSubmit">新增這個行程</button>
       <button class="btn-cancel" id="activityModalCancel" type="button">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="expenseModalOverlay" class="activity-modal-overlay" hidden>
+  <div class="activity-modal">
+    <div class="activity-modal-header">
+      <h3 id="expenseModalTitle">快速記一筆</h3>
+      <button type="button" class="activity-modal-close" id="expenseModalCloseBtn" aria-label="關閉">×</button>
+    </div>
+    <div class="activity-modal-body">
+      <select id="expDate"></select>
+      <label class="act-share-row">
+        <input type="checkbox" id="expShare" checked>
+        <span id="expShareLabel">共同花費（兩人都能看到、編輯）</span>
+      </label>
+      <input type="text" id="expName" placeholder="項目名稱，例如：超商飲料">
+      <div class="act-form-row">
+        <select id="expCategory">
+          <option value="吃喝">吃喝</option>
+          <option value="交通">交通</option>
+          <option value="景點">景點</option>
+          <option value="其他">其他</option>
+          <option value="演唱會">演唱會</option>
+          <option value="住宿">住宿</option>
+        </select>
+      </div>
+      <div class="act-form-row act-costmode-row" id="expCostModeRow">
+        <select id="expCostMode">
+          <option value="single">整體費用（一筆金額）</option>
+          <option value="separate">各自金額（分開輸入）</option>
+        </select>
+      </div>
+      <div id="expSingleCostGroup">
+        <div class="act-form-row">
+          <input type="number" id="expCost" placeholder="費用">
+          <select id="expCurrency" class="act-currency">
+            <option value="₩">₩ 韓元</option>
+            <option value="NT$">NT$ 台幣</option>
+          </select>
+        </div>
+        <label class="act-share-row" id="expSplitCostRow">
+          <input type="checkbox" id="expSplitCost">
+          <span>這筆金額是兩人合計，平分後才是一人份</span>
+        </label>
+        <div id="expPaidByRow">
+          <select id="expPaidBy">
+            <option value="">這筆先由誰付・尚未指定</option>
+            <option value="yuan">Yuan 先付了全額</option>
+            <option value="qixuan">琪萱 先付了全額</option>
+          </select>
+        </div>
+      </div>
+      <div id="expSeparateCostGroup" hidden>
+        <p class="act-field-hint">各自付各的，單純加總記錄</p>
+        <div class="act-form-row">
+          <input type="number" id="expCostYuan" placeholder="Yuan 金額">
+          <input type="number" id="expCostQixuan" placeholder="琪萱 金額">
+          <select id="expSeparateCurrency" class="act-currency">
+            <option value="₩">₩</option>
+            <option value="NT$">NT$</option>
+          </select>
+        </div>
+        <label class="act-field-hint" for="expSeparatePaidBy">如果有人先幫忙代墊全部（沒有的話留空）</label>
+        <select id="expSeparatePaidBy">
+          <option value="">沒有人代墊，各自現場付清</option>
+          <option value="yuan">Yuan 先代墊了全部</option>
+          <option value="qixuan">琪萱 先代墊了全部</option>
+        </select>
+      </div>
+      <input type="text" id="expNote" placeholder="備註（選填）">
+    </div>
+    <div class="activity-modal-actions">
+      <button class="btn act-submit" id="expenseModalSubmit">記錄這筆花費</button>
+      <button class="btn-cancel" id="expenseModalCancel" type="button">取消</button>
     </div>
   </div>
 </div>
@@ -1136,7 +1249,8 @@ let state = {
   activities: JSON.parse(JSON.stringify(SEED_ACTIVITIES)),
   todos: { yuan:[], qixuan:[], shared:[] },
   notes: { yuan:'', qixuan:'', shared:'' },
-  repayments: []
+  repayments: [],
+  expenses: []
 };
 
 const LOCAL_KEY = 'trip-seoul-incheon-busan-plave';
@@ -1182,6 +1296,7 @@ function initSync(){
       state.todos = val.todos || {yuan:[],qixuan:[],shared:[]};
       state.notes = val.notes || {yuan:'',qixuan:'',shared:''};
       state.repayments = val.repayments || [];
+      state.expenses = val.expenses || [];
       renderAll();
       updateSyncTime();
     }, err=>{
@@ -1430,9 +1545,19 @@ DAYS_DEF.forEach(day=>{
 
 function updateConditionalFieldVisibility(){
   const isShared = document.getElementById('actShare').checked;
+  const costMode = document.getElementById('actCostMode').value;
   const isSplit = document.getElementById('actSplitCost').checked;
-  document.getElementById('actSplitCostRow').classList.toggle('field-hidden', !isShared);
-  document.getElementById('actPaidByRow').classList.toggle('field-hidden', !(isShared && isSplit));
+
+  // 只有共同行程才需要問「整體費用還是各自金額」；私人行程一律當作整體費用。
+  document.getElementById('actCostModeRow').classList.toggle('field-hidden', !isShared);
+  const effectiveMode = isShared ? costMode : 'single';
+
+  document.getElementById('actSingleCostGroup').classList.toggle('field-hidden', effectiveMode !== 'single');
+  document.getElementById('actSeparateCostGroup').classList.toggle('field-hidden', effectiveMode !== 'separate');
+
+  // 平分勾選跟先付款人：只有「整體費用」模式底下才需要問
+  document.getElementById('actSplitCostRow').classList.toggle('field-hidden', !isShared || effectiveMode !== 'single');
+  document.getElementById('actPaidByRow').classList.toggle('field-hidden', !(isShared && effectiveMode === 'single' && isSplit));
 }
 
 function openActivityModal(date, editIndex){
@@ -1453,7 +1578,12 @@ function openActivityModal(date, editIndex){
     document.getElementById('actTimeEnd').value = item.timeEnd || '';
     document.getElementById('actShare').checked = (item.who || 'shared') === 'shared';
     document.getElementById('actSplitCost').checked = !!item.splitCost;
-    document.getElementById('actPaidBy').value = item.paidBy || '';
+    document.getElementById('actCostMode').value = item.costMode === 'separate' ? 'separate' : 'single';
+    document.getElementById('actCostYuan').value = item.costYuan || '';
+    document.getElementById('actCostQixuan').value = item.costQixuan || '';
+    document.getElementById('actSeparateCurrency').value = item.currency || '₩';
+    document.getElementById('actPaidBy').value = (item.costMode !== 'separate') ? (item.paidBy || '') : '';
+    document.getElementById('actSeparatePaidBy').value = (item.costMode === 'separate') ? (item.paidBy || '') : '';
     activityModalTitle.textContent = '編輯行程';
     activityModalSubmit.textContent = '更新這個行程';
   }else{
@@ -1468,7 +1598,12 @@ function openActivityModal(date, editIndex){
     document.getElementById('actTimeEnd').value = '';
     document.getElementById('actShare').checked = true;
     document.getElementById('actSplitCost').checked = defaultSplitCost('吃喝');
+    document.getElementById('actCostMode').value = 'single';
+    document.getElementById('actCostYuan').value = '';
+    document.getElementById('actCostQixuan').value = '';
+    document.getElementById('actSeparateCurrency').value = '₩';
     document.getElementById('actPaidBy').value = '';
+    document.getElementById('actSeparatePaidBy').value = '';
     activityModalTitle.textContent = '新增行程';
     activityModalSubmit.textContent = '新增這個行程';
   }
@@ -1489,6 +1624,7 @@ document.getElementById('actCategory').addEventListener('change', (e)=>{
 });
 document.getElementById('actShare').addEventListener('change', updateConditionalFieldVisibility);
 document.getElementById('actSplitCost').addEventListener('change', updateConditionalFieldVisibility);
+document.getElementById('actCostMode').addEventListener('change', updateConditionalFieldVisibility);
 
 function closeActivityModal(){
   activityModalOverlay.setAttribute('hidden','');
@@ -1520,8 +1656,8 @@ function defaultSplitCost(category){
   return category === '住宿';
 }
 function normalizeActivity(item){
-  if(typeof item === 'string') return {name:item, category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared', splitCost:false, paidBy:''};
-  const base = Object.assign({name:'', category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared', paidBy:''}, item);
+  if(typeof item === 'string') return {name:item, category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared', splitCost:false, paidBy:'', costMode:'single', costYuan:0, costQixuan:0};
+  const base = Object.assign({name:'', category:'其他', address:'', mapUrl:'', cost:0, currency:'₩', notes:'', timeStart:'', timeEnd:'', who:'shared', paidBy:'', costMode:'single', costYuan:0, costQixuan:0}, item);
   if(typeof base.splitCost !== 'boolean') base.splitCost = defaultSplitCost(base.category);
   return base;
 }
@@ -1557,7 +1693,9 @@ function renderActivityCard(a, i, date, who){
   }else if(mapHref){
     metaHtml += `<a href="${escapeHtml(mapHref)}" target="_blank" rel="noopener">Naver/Google Maps</a>`;
   }
-  if(a.cost){
+  if(a.costMode === 'separate' && (Number(a.costYuan) > 0 || Number(a.costQixuan) > 0)){
+    metaHtml += `<span class="activity-cost">${escapeHtml(a.currency||'₩')}${Number(a.costYuan||0).toLocaleString()}（Yuan）・${escapeHtml(a.currency||'₩')}${Number(a.costQixuan||0).toLocaleString()}（琪萱）</span>`;
+  }else if(a.cost){
     metaHtml += `<span class="activity-cost">${escapeHtml(a.currency||'₩')}${Number(a.cost).toLocaleString()}</span>`;
   }
   const isConcert = a.category === '演唱會';
@@ -1632,40 +1770,61 @@ function saveActivityFromModal(){
   const catEl = document.getElementById('actCategory');
   const addrEl = document.getElementById('actAddress');
   const mapEl = document.getElementById('actMapUrl');
-  const costEl = document.getElementById('actCost');
-  const currencyEl = document.getElementById('actCurrency');
   const notesEl = document.getElementById('actNotes');
   const startEl = document.getElementById('actTimeStart');
   const endEl = document.getElementById('actTimeEnd');
   const shareEl = document.getElementById('actShare');
-  const splitCostEl = document.getElementById('actSplitCost');
-  const paidByEl = document.getElementById('actPaidBy');
+  const costModeEl = document.getElementById('actCostMode');
 
   const name = nameEl.value.trim();
   if(!name){ nameEl.focus(); return; }
 
   const who = (shareEl && shareEl.checked) ? 'shared' : (currentUser || 'shared');
-  const isSplit = !!(splitCostEl && splitCostEl.checked);
+  const costMode = (who === 'shared') ? costModeEl.value : 'single';
   const originalDate = modalDate;
   const targetDate = actDateSelect.value;
   const editIndex = modalEditIndex;
 
-  const entry = {
+  let costFields;
+  if(costMode === 'separate'){
+    const cYuan = document.getElementById('actCostYuan').value ? parseFloat(document.getElementById('actCostYuan').value) : 0;
+    const cQixuan = document.getElementById('actCostQixuan').value ? parseFloat(document.getElementById('actCostQixuan').value) : 0;
+    costFields = {
+      cost: cYuan + cQixuan, // 合計金額，方便其他地方顯示參考用
+      currency: document.getElementById('actSeparateCurrency').value,
+      costMode: 'separate',
+      costYuan: cYuan,
+      costQixuan: cQixuan,
+      splitCost: false,
+      // 各自付各的：預設沒有誰欠誰；但如果有一方先代墊了全部，
+      // 這裡記錄代墊的人，分帳時只算「沒代墊那方自己的那份」欠代墊者。
+      paidBy: document.getElementById('actSeparatePaidBy').value
+    };
+  }else{
+    const isSplit = document.getElementById('actSplitCost').checked;
+    costFields = {
+      cost: document.getElementById('actCost').value ? parseFloat(document.getElementById('actCost').value) : 0,
+      currency: document.getElementById('actCurrency').value,
+      costMode: 'single',
+      costYuan: 0,
+      costQixuan: 0,
+      splitCost: isSplit,
+      // 只有「共同行程」且「需要平分」時，這筆才需要記錄實際先由誰付款，
+      // 其他情況（各付各的、或本來就只有一人參與）不需要分帳，一律清空。
+      paidBy: (who === 'shared' && isSplit) ? document.getElementById('actPaidBy').value : ''
+    };
+  }
+
+  const entry = Object.assign({
     name,
     category: catEl.value,
     address: addrEl.value.trim(),
     mapUrl: mapEl.value.trim(),
-    cost: costEl.value ? parseFloat(costEl.value) : 0,
-    currency: currencyEl.value,
     notes: notesEl.value.trim(),
     timeStart: startEl.value,
     timeEnd: endEl.value,
-    who: who,
-    splitCost: isSplit,
-    // 只有「共同行程」且「需要平分」時，這筆才需要記錄實際先由誰付款，
-    // 其他情況（各付各的、或本來就只有一人參與）不需要分帳，一律清空。
-    paidBy: (who === 'shared' && isSplit) ? (paidByEl ? paidByEl.value : '') : ''
-  };
+    who: who
+  }, costFields);
 
   if(!state.activities[targetDate]) state.activities[targetDate] = [];
 
@@ -1691,44 +1850,267 @@ function saveActivityFromModal(){
   if(dateChanged) writePath('activities/'+originalDate, state.activities[originalDate]);
 }
 
-function renderStay(){
-  const list = document.getElementById('stayList');
+/* ---------------- 快速記一筆（不屬於任何行程的花費） ---------------- */
+function normalizeExpense(item){
+  return Object.assign({name:'', category:'其他', cost:0, currency:'₩', notes:'', who:'shared', splitCost:false, paidBy:'', date:'', costMode:'single', costYuan:0, costQixuan:0}, item);
+}
+
+let expenseModalEditIndex = null;
+const expenseModalOverlay = document.getElementById('expenseModalOverlay');
+const expDateSelect = document.getElementById('expDate');
+
+DAYS_DEF.forEach(day=>{
+  const opt = document.createElement('option');
+  opt.value = day.date;
+  opt.textContent = fmtModalDate(day.date);
+  expDateSelect.appendChild(opt);
+});
+
+function updateExpenseConditionalFieldVisibility(){
+  const isShared = document.getElementById('expShare').checked;
+  const costMode = document.getElementById('expCostMode').value;
+  const isSplit = document.getElementById('expSplitCost').checked;
+
+  document.getElementById('expCostModeRow').classList.toggle('field-hidden', !isShared);
+  const effectiveMode = isShared ? costMode : 'single';
+
+  document.getElementById('expSingleCostGroup').classList.toggle('field-hidden', effectiveMode !== 'single');
+  document.getElementById('expSeparateCostGroup').classList.toggle('field-hidden', effectiveMode !== 'separate');
+
+  document.getElementById('expSplitCostRow').classList.toggle('field-hidden', !isShared || effectiveMode !== 'single');
+  document.getElementById('expPaidByRow').classList.toggle('field-hidden', !(isShared && effectiveMode === 'single' && isSplit));
+}
+
+function updateExpenseShareLabel(){
+  const other = currentUser === 'yuan' ? '琪萱' : currentUser === 'qixuan' ? 'Yuan' : '另一半';
+  const el = document.getElementById('expShareLabel');
+  if(el) el.textContent = '跟' + other + '一起（共同花費，兩人都能編輯）';
+}
+
+document.getElementById('expShare').addEventListener('change', updateExpenseConditionalFieldVisibility);
+document.getElementById('expSplitCost').addEventListener('change', updateExpenseConditionalFieldVisibility);
+document.getElementById('expCostMode').addEventListener('change', updateExpenseConditionalFieldVisibility);
+document.getElementById('expCategory').addEventListener('change', (e)=>{
+  document.getElementById('expSplitCost').checked = defaultSplitCost(e.target.value);
+  updateExpenseConditionalFieldVisibility();
+});
+
+function openExpenseModal(editIndex){
+  expenseModalEditIndex = (typeof editIndex === 'number') ? editIndex : null;
+
+  if(expenseModalEditIndex !== null){
+    const item = normalizeExpense(state.expenses[expenseModalEditIndex]);
+    expDateSelect.value = item.date || DAYS_DEF[0].date;
+    document.getElementById('expShare').checked = (item.who || 'shared') === 'shared';
+    document.getElementById('expName').value = item.name;
+    document.getElementById('expCategory').value = item.category;
+    document.getElementById('expCost').value = item.cost || '';
+    document.getElementById('expCurrency').value = item.currency || '₩';
+    document.getElementById('expSplitCost').checked = !!item.splitCost;
+    document.getElementById('expCostMode').value = item.costMode === 'separate' ? 'separate' : 'single';
+    document.getElementById('expCostYuan').value = item.costYuan || '';
+    document.getElementById('expCostQixuan').value = item.costQixuan || '';
+    document.getElementById('expSeparateCurrency').value = item.currency || '₩';
+    document.getElementById('expPaidBy').value = (item.costMode !== 'separate') ? (item.paidBy || '') : '';
+    document.getElementById('expSeparatePaidBy').value = (item.costMode === 'separate') ? (item.paidBy || '') : '';
+    document.getElementById('expNote').value = item.notes || '';
+    document.getElementById('expenseModalTitle').textContent = '編輯這筆花費';
+    document.getElementById('expenseModalSubmit').textContent = '更新這筆花費';
+  }else{
+    expDateSelect.value = DAYS_DEF[0].date;
+    document.getElementById('expShare').checked = true;
+    document.getElementById('expName').value = '';
+    document.getElementById('expCategory').value = '吃喝';
+    document.getElementById('expCost').value = '';
+    document.getElementById('expCurrency').value = '₩';
+    document.getElementById('expSplitCost').checked = defaultSplitCost('吃喝');
+    document.getElementById('expCostMode').value = 'single';
+    document.getElementById('expCostYuan').value = '';
+    document.getElementById('expCostQixuan').value = '';
+    document.getElementById('expSeparateCurrency').value = '₩';
+    document.getElementById('expPaidBy').value = '';
+    document.getElementById('expSeparatePaidBy').value = '';
+    document.getElementById('expNote').value = '';
+    document.getElementById('expenseModalTitle').textContent = '快速記一筆';
+    document.getElementById('expenseModalSubmit').textContent = '記錄這筆花費';
+  }
+  updateExpenseShareLabel();
+  updateExpenseConditionalFieldVisibility();
+  expenseModalOverlay.removeAttribute('hidden');
+  document.getElementById('expName').focus();
+}
+
+function closeExpenseModal(){
+  expenseModalOverlay.setAttribute('hidden','');
+  expenseModalEditIndex = null;
+}
+
+document.getElementById('quickExpBtn').addEventListener('click', ()=>openExpenseModal());
+document.getElementById('expenseModalCloseBtn').addEventListener('click', closeExpenseModal);
+document.getElementById('expenseModalCancel').addEventListener('click', closeExpenseModal);
+
+let expModalMouseDownOnOverlay = false;
+expenseModalOverlay.addEventListener('mousedown', (e)=>{
+  expModalMouseDownOnOverlay = (e.target === expenseModalOverlay);
+});
+expenseModalOverlay.addEventListener('click', (e)=>{
+  if(e.target === expenseModalOverlay && expModalMouseDownOnOverlay) closeExpenseModal();
+  expModalMouseDownOnOverlay = false;
+});
+
+document.getElementById('expenseModalSubmit').addEventListener('click', ()=>{
+  const nameEl = document.getElementById('expName');
+  const name = nameEl.value.trim();
+  if(!name){ nameEl.focus(); return; }
+
+  const who = document.getElementById('expShare').checked ? 'shared' : (currentUser || 'shared');
+  const costMode = (who === 'shared') ? document.getElementById('expCostMode').value : 'single';
+
+  let costFields;
+  if(costMode === 'separate'){
+    const cYuan = document.getElementById('expCostYuan').value ? parseFloat(document.getElementById('expCostYuan').value) : 0;
+    const cQixuan = document.getElementById('expCostQixuan').value ? parseFloat(document.getElementById('expCostQixuan').value) : 0;
+    costFields = {
+      cost: cYuan + cQixuan,
+      currency: document.getElementById('expSeparateCurrency').value,
+      costMode: 'separate',
+      costYuan: cYuan,
+      costQixuan: cQixuan,
+      splitCost: false,
+      paidBy: document.getElementById('expSeparatePaidBy').value
+    };
+  }else{
+    const isSplit = document.getElementById('expSplitCost').checked;
+    costFields = {
+      cost: document.getElementById('expCost').value ? parseFloat(document.getElementById('expCost').value) : 0,
+      currency: document.getElementById('expCurrency').value,
+      costMode: 'single',
+      costYuan: 0,
+      costQixuan: 0,
+      splitCost: isSplit,
+      paidBy: (who === 'shared' && isSplit) ? document.getElementById('expPaidBy').value : ''
+    };
+  }
+
+  const entry = Object.assign({
+    name,
+    category: document.getElementById('expCategory').value,
+    notes: document.getElementById('expNote').value.trim(),
+    who: who,
+    date: expDateSelect.value
+  }, costFields);
+
+  if(!state.expenses) state.expenses = [];
+  if(expenseModalEditIndex !== null){
+    state.expenses[expenseModalEditIndex] = entry;
+  }else{
+    state.expenses.push(entry);
+  }
+
+  closeExpenseModal();
+  renderStay();
+  writePath('expenses', state.expenses);
+});
+
+// 統一彙整「行程裡的費用」跟「快速記一筆」的花費，
+// costMode 為「各自金額」的項目會拆成兩筆各自的花費（供總覽使用），
+// 避免把兩人合計重複算進各自的總額裡。
+function getAllCostRows(){
   const rows = [];
+  function pushRow(norm, extra){
+    if(norm.costMode === 'separate'){
+      if(Number(norm.costYuan) > 0){
+        rows.push(Object.assign({}, norm, extra, {who:'yuan', cost:Number(norm.costYuan), splitCost:false, paidBy:'', _fromSeparate:true}));
+      }
+      if(Number(norm.costQixuan) > 0){
+        rows.push(Object.assign({}, norm, extra, {who:'qixuan', cost:Number(norm.costQixuan), splitCost:false, paidBy:'', _fromSeparate:true}));
+      }
+    }else if(Number(norm.cost) > 0){
+      rows.push(Object.assign({}, norm, extra));
+    }
+  }
   DAYS_DEF.forEach(day=>{
     const items = (state.activities[day.date] || []).map(normalizeActivity);
-    items.forEach(a=>{
-      if(Number(a.cost) > 0) rows.push(Object.assign({}, a, {date: day.date}));
+    items.forEach((a,i)=>{
+      pushRow(a, {date: day.date, _source:'activity', _index:i});
     });
   });
+  (state.expenses || []).forEach((e,i)=>{
+    const norm = normalizeExpense(e);
+    pushRow(norm, {_source:'expense', _index:i});
+  });
+  return rows;
+}
 
-  // 「總覽」只顯示跟目前身份有關的項目：共同行程 + 自己的個人行程，
-  // 對方專屬的行程不顯示、也不計入自己的總計。
+// 分帳專用：只掃「原始」項目（不是上面拆分過的顯示用 virtual rows），
+// 統一算出誰欠誰多少，跟「總覽」算各自花多少的邏輯完全分開，避免互相干擾算錯。
+//  - 整體費用模式：共同＋有勾平分＋有指定先付款人 → 欠款＝總額的一半
+//  - 各自金額模式：共同＋有指定先代墊全部的人 → 欠款＝沒代墊那方自己那份的金額（不是對半分）
+function getSettleEntries(){
+  const entries = [];
+  function check(norm, extra){
+    if((norm.who || 'shared') !== 'shared') return;
+    if(norm.costMode === 'separate'){
+      if(norm.paidBy === 'yuan' && Number(norm.costQixuan) > 0){
+        entries.push(Object.assign({}, norm, extra, {debtor:'qixuan', creditor:'yuan', amount:Number(norm.costQixuan)}));
+      }else if(norm.paidBy === 'qixuan' && Number(norm.costYuan) > 0){
+        entries.push(Object.assign({}, norm, extra, {debtor:'yuan', creditor:'qixuan', amount:Number(norm.costYuan)}));
+      }
+      // paidBy 留空 → 各自現場付清，沒有欠款
+    }else if(norm.splitCost && (norm.paidBy === 'yuan' || norm.paidBy === 'qixuan') && Number(norm.cost) > 0){
+      const debtor = norm.paidBy === 'yuan' ? 'qixuan' : 'yuan';
+      entries.push(Object.assign({}, norm, extra, {debtor, creditor:norm.paidBy, amount:Number(norm.cost)/2}));
+    }
+  }
+  DAYS_DEF.forEach(day=>{
+    (state.activities[day.date] || []).map(normalizeActivity).forEach((a,i)=>{
+      check(a, {date: day.date, _source:'activity', _index:i});
+    });
+  });
+  (state.expenses || []).forEach((e,i)=>{
+    check(normalizeExpense(e), {date: normalizeExpense(e).date, _source:'expense', _index:i});
+  });
+  return entries;
+}
+
+function renderStay(){
+  const list = document.getElementById('stayList');
+  const rows = getAllCostRows();
+
+  // 「總覽」只顯示跟目前身份有關的項目：共同行程/記帳 + 自己的個人項目，
+  // 對方專屬的項目不顯示、也不計入自己的總計。
   const me = currentUser || 'shared';
   const myRows = rows.filter(r => (r.who || 'shared') === 'shared' || (r.who || 'shared') === me);
 
   if(myRows.length===0){
-    list.innerHTML = '<div class="empty">「行程」裡還沒有跟你有關、且填了費用的項目</div>';
+    list.innerHTML = '<div class="empty">還沒有跟你有關、且填了費用的項目</div>';
   }else{
     list.innerHTML = myRows.map(r=>{
-      const d = new Date(r.date+'T00:00:00');
+      const d = r.date ? new Date(r.date+'T00:00:00') : null;
       const cur = r.currency || '₩';
       const who = r.who || 'shared';
       let metaText;
-      if(who === 'shared'){
+      if(r._fromSeparate){
+        metaText = `共同項目，各自結帳・這是 ${escapeHtml(whoLabel(who))} 的部分`;
+      }else if(who === 'shared'){
         const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
         metaText = r.splitCost
-          ? `兩人合計，一人份 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}`
-          : `共同行程，兩人各付 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}`;
+          ? `共同項目，兩人平分，一人份 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}`
+          : `共同項目，兩人各付 ${escapeHtml(cur)}${Math.round(perPerson).toLocaleString()}`;
       }else{
         metaText = `僅 ${escapeHtml(whoLabel(who))} 需付這筆費用`;
       }
+      const sourceTag = r._source === 'expense' ? '<span class="act-tag cat-other">記帳</span>' : '';
       return `
         <div class="stay-item">
           <div class="stay-top">
             <span class="act-tag ${CAT_CLASS[r.category]||'cat-other'}">${escapeHtml(r.category)}</span>
-            <span class="stay-date">${d.getMonth()+1}/${d.getDate()}</span>
+            ${sourceTag}
+            <span class="stay-date">${d ? (d.getMonth()+1)+'/'+d.getDate() : ''}</span>
             <div class="stay-name">${escapeHtml(r.name)}</div>
             <span class="stay-amt">${escapeHtml(cur)}${Number(r.cost||0).toLocaleString()}</span>
+            <button class="stay-edit" data-source="${r._source}" data-date="${r.date||''}" data-i="${r._index}" aria-label="編輯"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg></button>
+            <button class="stay-del" data-source="${r._source}" data-date="${r.date||''}" data-i="${r._index}" aria-label="刪除"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></button>
           </div>
           <div class="stay-meta">
             ${metaText}
@@ -1738,20 +2120,39 @@ function renderStay(){
         </div>
       `;
     }).join('');
+
+    list.querySelectorAll('.stay-edit').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        if(b.dataset.source === 'activity'){ openDay(b.dataset.date); openActivityModal(b.dataset.date, parseInt(b.dataset.i)); }
+        else openExpenseModal(parseInt(b.dataset.i));
+      });
+    });
+    list.querySelectorAll('.stay-del').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        if(b.dataset.source === 'activity'){
+          const date = b.dataset.date;
+          state.activities[date].splice(parseInt(b.dataset.i), 1);
+          renderActivities(date);
+          writePath('activities/'+date, state.activities[date]);
+        }else{
+          state.expenses.splice(parseInt(b.dataset.i), 1);
+          writePath('expenses', state.expenses);
+        }
+        renderStay();
+      });
+    });
   }
 
-  // 只算自己要付的總金額：共同行程算自己那一份，自己的個人行程全額算，
-  // 對方專屬的行程完全不計入。
+  // 只算自己要付的總金額：共同項目算自己那一份（平分則/2，不平分則兩人各付全額），
+  // 自己的個人項目全額算，對方專屬的項目完全不計入。
   const totalsByCurrency = {};
   myRows.forEach(r=>{
     const cur = r.currency || '₩';
     const who = r.who || 'shared';
     if(!totalsByCurrency[cur]) totalsByCurrency[cur] = { raw:0, mine:0 };
     totalsByCurrency[cur].raw += Number(r.cost || 0);
-
     if(who === 'shared'){
-      const perPerson = r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
-      totalsByCurrency[cur].mine += perPerson;
+      totalsByCurrency[cur].mine += r.splitCost ? (Number(r.cost)/2) : Number(r.cost);
     }else{
       totalsByCurrency[cur].mine += Number(r.cost);
     }
@@ -1772,28 +2173,26 @@ function renderStay(){
           <div><div class="label">${curLabel}・${escapeHtml(meLabel)} 預估花費</div></div>
           <div class="amt">${escapeHtml(cur)}${Math.round(t.mine).toLocaleString()}</div>
         </div>
-        <p class="split-note">${curLabel}原始金額加總（含共同行程全額）${escapeHtml(cur)}${t.raw.toLocaleString()}</p>
+        <p class="split-note">${curLabel}原始金額加總（含共同項目全額）${escapeHtml(cur)}${t.raw.toLocaleString()}</p>
       `;
     }).join('');
   }
 
-  renderSettle(rows);
+  renderSettle();
 }
 
-function renderSettle(rows){
+function renderSettle(){
   const el = document.getElementById('settleList');
   if(!el) return;
 
-  // 只有「共同・需要平分・且有指定先付款人」的項目才需要分帳
-  const settleRows = rows.filter(r => (r.who || 'shared') === 'shared' && r.splitCost && (r.paidBy === 'yuan' || r.paidBy === 'qixuan'));
+  const settleRows = getSettleEntries();
 
   const byCurrency = {};
   settleRows.forEach(r=>{
     const cur = r.currency || '₩';
     if(!byCurrency[cur]) byCurrency[cur] = { items: [], net: 0 };
-    const half = Number(r.cost) / 2;
     // net > 0 代表琪萱欠 Yuan；net < 0 代表 Yuan 欠琪萱
-    byCurrency[cur].net += (r.paidBy === 'yuan') ? half : -half;
+    byCurrency[cur].net += (r.creditor === 'yuan') ? r.amount : -r.amount;
     byCurrency[cur].items.push(r);
   });
 
@@ -1808,7 +2207,7 @@ function renderSettle(rows){
 
   const currencies = Object.keys(byCurrency);
   if(currencies.length === 0){
-    el.innerHTML = '<div class="empty">目前沒有需要分帳的項目。到「行程」把某筆共同・需要平分的行程，選擇是誰先付的，這裡就會自動算給你看。</div>';
+    el.innerHTML = '<div class="empty">目前沒有需要分帳的項目。到「行程」或「花費」把某筆共同行程／記帳，設定平分先付款人，或選「各自金額」並指定代墊者，這裡就會自動算給你看。</div>';
   }else{
     el.innerHTML = currencies.map(cur=>{
       const info = byCurrency[cur];
@@ -1824,18 +2223,21 @@ function renderSettle(rows){
       }
 
       const itemsHtml = info.items.map(r=>{
-        const d = new Date(r.date+'T00:00:00');
-        const half = Math.round(Number(r.cost)/2);
-        const payer = r.paidBy === 'yuan' ? 'Yuan' : '琪萱';
-        const ower = r.paidBy === 'yuan' ? '琪萱' : 'Yuan';
+        const d = r.date ? new Date(r.date+'T00:00:00') : null;
+        const payer = whoLabel(r.creditor);
+        const ower = whoLabel(r.debtor);
+        const owedAmt = Math.round(r.amount);
+        const modeNote = r.costMode === 'separate'
+          ? `${escapeHtml(payer)} 先代墊了全部，${escapeHtml(ower)} 欠自己那份 ${escapeHtml(cur)}${owedAmt.toLocaleString()}`
+          : `${escapeHtml(payer)} 先付了全額，${escapeHtml(ower)} 欠 ${escapeHtml(payer)} 一半 ${escapeHtml(cur)}${owedAmt.toLocaleString()}`;
         return `
           <div class="stay-item">
             <div class="stay-top">
-              <span class="stay-date">${d.getMonth()+1}/${d.getDate()}</span>
+              ${d ? `<span class="stay-date">${d.getMonth()+1}/${d.getDate()}</span>` : ''}
               <div class="stay-name">${escapeHtml(r.name)}</div>
               <span class="stay-amt">${escapeHtml(cur)}${Number(r.cost).toLocaleString()}</span>
             </div>
-            <div class="stay-meta">${escapeHtml(payer)} 先付了全額，${escapeHtml(ower)} 欠 ${escapeHtml(payer)} ${escapeHtml(cur)}${half.toLocaleString()}</div>
+            <div class="stay-meta">${modeNote}</div>
           </div>
         `;
       }).join('');
